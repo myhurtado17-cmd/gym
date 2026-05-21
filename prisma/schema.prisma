@@ -1,0 +1,262 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum GoalType {
+  WEIGHT
+  BODY_FAT
+  CALORIES
+  MACROS
+  STRENGTH
+}
+
+enum WorkoutVisibility {
+  PRIVATE
+  TEMPLATE
+}
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String
+  name         String?
+  imageUrl     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile         UserProfile?
+  sessions        Session[]
+  bodyMetrics     BodyMetric[]
+  routines        WorkoutRoutine[]
+  workoutSessions WorkoutSession[]
+  exercises       Exercise[]
+  meals           Meal[]
+  nutritionDays   NutritionDay[]
+  goals           Goal[]
+
+  @@index([createdAt])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model UserProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  age          Int?
+  heightCm     Int?
+  goalWeightKg Decimal? @db.Decimal(5, 2)
+  fitnessGoal  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BodyMetric {
+  id         String   @id @default(cuid())
+  userId     String
+  date       DateTime @db.Date
+  weightKg   Decimal? @db.Decimal(5, 2)
+  bodyFatPct Decimal? @db.Decimal(5, 2)
+  armsCm     Decimal? @db.Decimal(5, 2)
+  chestCm    Decimal? @db.Decimal(5, 2)
+  waistCm    Decimal? @db.Decimal(5, 2)
+  legsCm     Decimal? @db.Decimal(5, 2)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model Exercise {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  muscle    String?
+  equipment String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routineItems WorkoutRoutineItem[]
+  setLogs      WorkoutSetLog[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model WorkoutRoutine {
+  id         String            @id @default(cuid())
+  userId     String
+  name       String
+  visibility WorkoutVisibility @default(PRIVATE)
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days     WorkoutDay[]
+  sessions WorkoutSession[]
+
+  @@index([userId, createdAt])
+}
+
+model WorkoutDay {
+  id        String @id @default(cuid())
+  routineId String
+  name      String
+  sortOrder Int    @default(0)
+
+  routine  WorkoutRoutine       @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  items    WorkoutRoutineItem[]
+  sessions WorkoutSession[]
+
+  @@index([routineId, sortOrder])
+}
+
+model WorkoutRoutineItem {
+  id         String  @id @default(cuid())
+  dayId      String
+  exerciseId String
+  sortOrder  Int     @default(0)
+  targetSets Int?
+  targetReps String?
+  notes      String?
+
+  day      WorkoutDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  exercise Exercise   @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+
+  @@index([dayId, sortOrder])
+  @@index([exerciseId])
+}
+
+model WorkoutSession {
+  id        String   @id @default(cuid())
+  userId    String
+  routineId String?
+  dayId     String?
+  date      DateTime @default(now())
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routine WorkoutRoutine? @relation(fields: [routineId], references: [id], onDelete: SetNull)
+  day     WorkoutDay?     @relation(fields: [dayId], references: [id], onDelete: SetNull)
+  setLogs WorkoutSetLog[]
+
+  @@index([userId, date])
+  @@index([routineId])
+}
+
+model WorkoutSetLog {
+  id         String   @id @default(cuid())
+  sessionId  String
+  exerciseId String
+  setNumber  Int
+  reps       Int?
+  weightKg   Decimal? @db.Decimal(6, 2)
+  rpe        Decimal? @db.Decimal(3, 1)
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  session  WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise Exercise       @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+
+  @@index([sessionId])
+  @@index([exerciseId, createdAt])
+}
+
+model Meal {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries NutritionEntry[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model NutritionDay {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime @db.Date
+  calories  Int      @default(0)
+  proteinG  Int      @default(0)
+  carbsG    Int      @default(0)
+  fatG      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries NutritionEntry[]
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model NutritionEntry {
+  id             String   @id @default(cuid())
+  nutritionDayId String
+  mealId         String?
+  mealName       String
+  calories       Int
+  proteinG       Int
+  carbsG         Int
+  fatG           Int
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  day  NutritionDay @relation(fields: [nutritionDayId], references: [id], onDelete: Cascade)
+  meal Meal?        @relation(fields: [mealId], references: [id], onDelete: SetNull)
+
+  @@index([nutritionDayId, createdAt])
+  @@index([mealId])
+}
+
+model Goal {
+  id          String    @id @default(cuid())
+  userId      String
+  type        GoalType
+  title       String
+  targetValue Decimal?  @db.Decimal(10, 2)
+  unit        String?
+  startsAt    DateTime  @db.Date
+  endsAt      DateTime? @db.Date
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([userId, startsAt])
+}

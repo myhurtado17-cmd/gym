@@ -1,0 +1,44 @@
+---
+import AppLayout from '@/layouts/AppLayout.astro';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+const error = Astro.url.searchParams.get('error');
+---
+
+<AppLayout title="Gym | Login">
+  <main class="relative">
+    <div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <div class="absolute -top-48 left-1/2 h-[620px] w-[620px] -translate-x-1/2 rounded-full bg-gradient-to-tr from-fuchsia-500/20 via-sky-500/20 to-emerald-500/20 blur-3xl" />
+    </div>
+
+    <div class="mx-auto grid min-h-dvh max-w-md place-items-center px-4 py-10">
+      <Card className="glass w-full">
+        <CardHeader>
+          <CardTitle>Welcome back</CardTitle>
+          <CardDescription>Sign in to your dashboard.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error ? <p class="mb-4 text-sm text-destructive">{error}</p> : null}
+          <form method="post" action="/api/auth/login" class="grid gap-4">
+            <div class="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" name="email" type="email" autoComplete="email" required />
+            </div>
+            <div class="grid gap-2">
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" name="password" type="password" autoComplete="current-password" required />
+            </div>
+            <Button type="submit">Sign in</Button>
+            <p class="text-sm text-muted-foreground">
+              No account?{' '}
+              <a class="underline underline-offset-4 hover:text-foreground" href="/register">Create one</a>
+            </p>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  </main>
+</AppLayout>

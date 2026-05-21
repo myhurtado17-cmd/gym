@@ -1,0 +1,143 @@
+---
+import AppLayout from '@/layouts/AppLayout.astro';
+import Shell from '@/components/shell/Shell.astro';
+import StatCard from '@/components/dashboard/StatCard.astro';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { WeightChart } from '@/components/dashboard/WeightChart';
+import { formatNumber } from '@/lib/number';
+import {
+  getActiveGoals,
+  getLatestWeight,
+  getRecentWorkouts,
+  getTodayNutrition,
+  getWeightSeries
+} from '@/lib/dashboard/queries';
+import { toISODate } from '@/lib/date';
+
+// Guard (also enforced by middleware)
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+
+const user = Astro.locals.user;
+
+const [latestWeight, weightSeries, todayNutrition, recentWorkouts, activeGoals] = await Promise.all([
+  getLatestWeight(user.id),
+  getWeightSeries(user.id, 14),
+  getTodayNutrition(user.id),
+  getRecentWorkouts(user.id, 5),
+  getActiveGoals(user.id, 3)
+]);
+
+const weightPoints = weightSeries
+  .filter((p) => typeof p.weightKg === 'number')
+  .map((p) => ({
+    label: toISODate(p.date).slice(5),
+    kg: p.weightKg as number
+  }));
+
+const weightDelta = weightPoints.length >= 2 ? weightPoints[weightPoints.length - 1].kg - weightPoints[0].kg : null;
+---
+
+<AppLayout title="Gym | Dashboard">
+  <Shell title="Dashboard" subtitle="Your week at a glance">
+    <div class="grid gap-4">
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Current weight"
+          value={
+            latestWeight?.weightKg != null
+              ? `${formatNumber(latestWeight.weightKg, { maximumFractionDigits: 1 })} kg`
+              : '—'
+          }
+          hint={latestWeight ? `Last updated ${toISODate(latestWeight.date)}` : 'Add your first weigh-in'}
+        />
+        <StatCard
+          title="14-day change"
+          value={weightDelta != null ? `${weightDelta > 0 ? '+' : ''}${formatNumber(weightDelta, { maximumFractionDigits: 1 })} kg` : '—'}
+          hint="Based on logged weigh-ins"
+        />
+        <StatCard title="Calories today" value={formatNumber(todayNutrition.calories)} hint="Auto-updates from meal logs" />
+        <StatCard
+          title="Macros today"
+          value={`${todayNutrition.proteinG}P ${todayNutrition.carbsG}C ${todayNutrition.fatG}F`}
+          hint="grams"
+        />
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-12">
+        <Card className="glass lg:col-span-7">
+          <CardHeader>
+            <CardTitle>Weight trend</CardTitle>
+            <CardDescription>Last 14 days</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[280px]">
+            <WeightChart client:load points={weightPoints} />
+          </CardContent>
+        </Card>
+
+        <Card className="glass lg:col-span-5">
+          <CardHeader>
+            <CardTitle>Recent workouts</CardTitle>
+            <CardDescription>Your last sessions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentWorkouts.length ? (
+              <div class="grid gap-3">
+                {recentWorkouts.map((w) => (
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-medium">
+                        {w.routineName ?? 'Workout'}
+                        {w.dayName ? ` • ${w.dayName}` : ''}
+                      </p>
+                      <p class="text-xs text-muted-foreground">{toISODate(w.date)} • {w.setCount} sets</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p class="text-sm text-muted-foreground">No workouts logged yet.</p>
+            )}
+
+            <div class="mt-4">
+              <a href="/workouts">
+                <Button variant="outline">Go to Workouts</Button>
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="glass">
+        <CardHeader>
+          <CardTitle>Active goals</CardTitle>
+          <CardDescription>What you’re working toward right now</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {activeGoals.length ? (
+            <div class="grid gap-3 md:grid-cols-3">
+              {activeGoals.map((g) => (
+                <div class="rounded-lg border border-border/60 bg-background/30 p-4">
+                  <p class="text-sm font-medium">{g.title}</p>
+                  <p class="mt-1 text-xs text-muted-foreground">
+                    Target: {g.targetValue != null ? formatNumber(g.targetValue, { maximumFractionDigits: 1 }) : '—'} {g.unit ?? ''}
+                    {g.endsAt ? ` • until ${toISODate(g.endsAt)}` : ''}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p class="text-sm text-muted-foreground">No active goals yet.</p>
+          )}
+          <div class="mt-4">
+            <a href="/goals">
+              <Button variant="outline">Manage goals</Button>
+            </a>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  </Shell>
+</AppLayout>
