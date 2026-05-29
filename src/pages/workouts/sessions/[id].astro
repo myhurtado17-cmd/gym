@@ -1,0 +1,302 @@
+---
+import AppLayout from '@/layouts/AppLayout.astro';
+import Shell from '@/components/shell/Shell.astro';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import CsrfInput from '@/components/security/CsrfInput.astro';
+import { getWorkoutSession } from '@/lib/workouts/sessions';
+import { formatDateTime } from '@/lib/datetime';
+import { decimalToNumber, formatNumber } from '@/lib/number';
+
+if (!Astro.locals.user) return Astro.redirect('/login');
+
+const id = Astro.params.id;
+if (!id) return Astro.redirect('/workouts');
+
+  const session = await getWorkoutSession(Astro.locals.user.id, id);
+  if (!session) return Astro.redirect('/workouts');
+
+  const error = Astro.url.searchParams.get('error');
+
+  const isCompleted = Boolean(session.completedAt);
+
+  const byExercise = new Map<string, typeof session.setLogs>();
+  for (const log of session.setLogs) {
+    const k = log.exerciseId;
+    const arr = byExercise.get(k) ?? [];
+    arr.push(log);
+    byExercise.set(k, arr);
+  }
+
+  const dayItems = session.day?.items ?? [];
+
+  const adHocExercises = session.day
+    ? []
+    : Array.from(
+        new Map(
+          session.setLogs.map((l) => [l.exerciseId, { id: l.exerciseId, name: l.exercise.name }])
+        ).values()
+      );
+---
+
+<AppLayout title="Gym | Workout Session">
+  <Shell
+    title="Workout session"
+    subtitle={`${formatDateTime(session.date)}${session.routine ? ` · ${session.routine.name}` : ''}${session.day ? ` · ${session.day.name}` : ''}`}
+  >
+    <div class="flex flex-col gap-4">
+      {error ? <p class="text-sm text-destructive">{error}</p> : null}
+      <div class="flex items-center justify-between">
+        <Button asChild variant="ghost">
+          <a href="/workouts">Back</a>
+        </Button>
+        <div class="flex items-center gap-2">
+          <form method="post" action="/api/workouts/sessions/delete">
+            <CsrfInput />
+            <input type="hidden" name="sessionId" value={session.id} />
+            <Button type="submit" variant="outline" size="sm">Delete</Button>
+          </form>
+          {!isCompleted ? (
+            <form method="post" action="/api/workouts/sessions/finish">
+              <CsrfInput />
+              <input type="hidden" name="sessionId" value={session.id} />
+              <Button type="submit" variant="secondary" size="sm">Finish</Button>
+            </form>
+          ) : (
+            <p class="text-xs text-muted-foreground">Completed</p>
+          )}
+        </div>
+      </div>
+
+      {!isCompleted ? (
+        <Card className="border-border/60 bg-background/10">
+          <CardHeader>
+            <CardTitle>Session notes</CardTitle>
+            <CardDescription>Optional notes saved on finish.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form method="post" action="/api/workouts/sessions/finish" class="grid gap-2">
+              <CsrfInput />
+              <input type="hidden" name="sessionId" value={session.id} />
+              <textarea
+                name="notes"
+                rows={3}
+                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                placeholder="How did it go? PRs, technique notes, pain, etc."
+              />
+              <div class="flex justify-end">
+                <Button type="submit" variant="secondary" size="sm">Finish session</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {dayItems.length ? (
+        <div class="grid gap-4">
+          {dayItems.map((it) => {
+            const logs = byExercise.get(it.exercise.id) ?? [];
+            const targetSets = it.targetSets ?? 3;
+            const sets = Array.from({ length: Math.max(targetSets, logs.length || 0) }, (_, i) => {
+              const setNumber = i + 1;
+              const existing = logs.find((l) => l.setNumber === setNumber) ?? null;
+              return { setNumber, existing };
+            });
+
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle>{it.exercise.name}</CardTitle>
+                  <CardDescription>
+                    {it.targetSets != null || it.targetReps ? (
+                      <>
+                        {it.targetSets != null ? `${it.targetSets} sets` : 'Sets'}
+                        {it.targetReps ? ` · ${it.targetReps} reps` : ''}
+                      </>
+                    ) : (
+                      'No target'
+                    )}
+                    {it.notes ? ` · ${it.notes}` : ''}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div class="grid gap-2">
+                    {sets.map(({ setNumber, existing }) => (
+                      <form
+                        method="post"
+                        action="/api/workouts/sessions/save"
+                        class="grid grid-cols-[56px_1fr_1fr_1fr] items-end gap-2 rounded-lg border border-border/60 bg-background/30 p-2"
+                      >
+                        <CsrfInput />
+                        <input type="hidden" name="sessionId" value={session.id} />
+                        <input type="hidden" name="exerciseId" value={it.exercise.id} />
+                        <input type="hidden" name="setNumber" value={String(setNumber)} />
+
+                        <div class="text-xs text-muted-foreground">Set {setNumber}</div>
+                        <div class="grid gap-1">
+                          <label class="text-xs text-muted-foreground" for={`reps-${it.exercise.id}-${setNumber}`}>Reps</label>
+                          <Input
+                            id={`reps-${it.exercise.id}-${setNumber}`}
+                            name="reps"
+                            inputMode="numeric"
+                            placeholder="8"
+                            defaultValue={existing?.reps ?? ''}
+                            disabled={isCompleted}
+                          />
+                        </div>
+                        <div class="grid gap-1">
+                          <label class="text-xs text-muted-foreground" for={`weight-${it.exercise.id}-${setNumber}`}>Kg</label>
+                          <Input
+                            id={`weight-${it.exercise.id}-${setNumber}`}
+                            name="weightKg"
+                            inputMode="decimal"
+                            placeholder="60"
+                            defaultValue={existing?.weightKg != null ? formatNumber(decimalToNumber(existing.weightKg) ?? null) : ''}
+                            disabled={isCompleted}
+                          />
+                        </div>
+                        <div class="grid gap-1">
+                          <label class="text-xs text-muted-foreground" for={`rpe-${it.exercise.id}-${setNumber}`}>RPE</label>
+                          <div class="flex gap-2">
+                            <Input
+                              id={`rpe-${it.exercise.id}-${setNumber}`}
+                              name="rpe"
+                              inputMode="decimal"
+                              placeholder="8"
+                              defaultValue={existing?.rpe != null ? formatNumber(decimalToNumber(existing.rpe) ?? null) : ''}
+                              disabled={isCompleted}
+                            />
+                            <Button type="submit" size="sm" variant="secondary" disabled={isCompleted}>Save</Button>
+                          </div>
+                        </div>
+                      </form>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <div class="grid gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Ad-hoc session</CardTitle>
+              <CardDescription>Add exercises as you go.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form method="post" action="/api/workouts/sessions/add-exercise" class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <CsrfInput />
+                <input type="hidden" name="sessionId" value={session.id} />
+                <div class="grid flex-1 gap-1">
+                  <label class="text-xs text-muted-foreground" for="exerciseName">Exercise name</label>
+                  <Input id="exerciseName" name="name" placeholder="Lat Pulldown" required disabled={isCompleted} />
+                </div>
+                <Button type="submit" variant="secondary" disabled={isCompleted}>Add</Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {adHocExercises.length ? (
+            <div class="grid gap-4">
+              {adHocExercises.map((ex) => {
+                const logs = byExercise.get(ex.id) ?? [];
+                const maxSet = logs.reduce((m, l) => Math.max(m, l.setNumber), 0);
+                const sets = Array.from({ length: Math.max(3, maxSet || 0) }, (_, i) => {
+                  const setNumber = i + 1;
+                  const existing = logs.find((l) => l.setNumber === setNumber) ?? null;
+                  return { setNumber, existing };
+                });
+
+                return (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{ex.name}</CardTitle>
+                      <CardDescription>{logs.length ? `${logs.length} saved sets` : 'No sets yet'}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div class="grid gap-2">
+                        {sets.map(({ setNumber, existing }) => (
+                          <div class="grid gap-2 rounded-lg border border-border/60 bg-background/30 p-2">
+                            <form
+                              method="post"
+                              action="/api/workouts/sessions/save"
+                              class="grid grid-cols-[56px_1fr_1fr_1fr] items-end gap-2"
+                            >
+                              <CsrfInput />
+                              <input type="hidden" name="sessionId" value={session.id} />
+                              <input type="hidden" name="exerciseId" value={ex.id} />
+                              <input type="hidden" name="setNumber" value={String(setNumber)} />
+
+                              <div class="text-xs text-muted-foreground">Set {setNumber}</div>
+                              <div class="grid gap-1">
+                                <label class="text-xs text-muted-foreground" for={`reps-${ex.id}-${setNumber}`}>Reps</label>
+                                <Input
+                                  id={`reps-${ex.id}-${setNumber}`}
+                                  name="reps"
+                                  inputMode="numeric"
+                                  placeholder="8"
+                                  defaultValue={existing?.reps ?? ''}
+                                  disabled={isCompleted}
+                                />
+                              </div>
+                              <div class="grid gap-1">
+                                <label class="text-xs text-muted-foreground" for={`weight-${ex.id}-${setNumber}`}>Kg</label>
+                                <Input
+                                  id={`weight-${ex.id}-${setNumber}`}
+                                  name="weightKg"
+                                  inputMode="decimal"
+                                  placeholder="60"
+                                  defaultValue={existing?.weightKg != null ? formatNumber(decimalToNumber(existing.weightKg) ?? null) : ''}
+                                  disabled={isCompleted}
+                                />
+                              </div>
+                              <div class="grid gap-1">
+                                <label class="text-xs text-muted-foreground" for={`rpe-${ex.id}-${setNumber}`}>RPE</label>
+                                <div class="flex gap-2">
+                                  <Input
+                                    id={`rpe-${ex.id}-${setNumber}`}
+                                    name="rpe"
+                                    inputMode="decimal"
+                                    placeholder="8"
+                                    defaultValue={existing?.rpe != null ? formatNumber(decimalToNumber(existing.rpe) ?? null) : ''}
+                                    disabled={isCompleted}
+                                  />
+                                  <Button type="submit" size="sm" variant="secondary" disabled={isCompleted}>Save</Button>
+                                </div>
+                              </div>
+                            </form>
+
+                            {existing ? (
+                              <form method="post" action="/api/workouts/sessions/delete-set" class="flex justify-end">
+                                <CsrfInput />
+                                <input type="hidden" name="sessionId" value={session.id} />
+                                <input type="hidden" name="exerciseId" value={ex.id} />
+                                <input type="hidden" name="setNumber" value={String(setNumber)} />
+                                <Button type="submit" size="sm" variant="ghost" disabled={isCompleted}>
+                                  Delete set
+                                </Button>
+                              </form>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>No exercises yet</CardTitle>
+                <CardDescription>Add your first exercise above.</CardDescription>
+              </CardHeader>
+            </Card>
+          )}
+        </div>
+      )}
+    </div>
+  </Shell>
+</AppLayout>

@@ -5,6 +5,8 @@ import { prisma } from '@/lib/db';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/constants';
 import { getSessionFromRequest } from '@/lib/auth/session';
 import { parseISODate } from '@/lib/date';
+import { requireCsrf } from '@/lib/security/api';
+import { CSRF_FIELD_NAME } from '@/lib/security/csrf';
 
 const schema = z.object({
   date: z.string().min(10).max(10),
@@ -32,6 +34,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   if (!session) return redirect('/login');
 
   const formData = await request.formData();
+  if (!requireCsrf(cookies, formData.get(CSRF_FIELD_NAME))) {
+    return redirect(`/body?error=${encodeURIComponent('Invalid session')}`);
+  }
   const parsed = schema.safeParse({
     date: formData.get('date')?.toString(),
     weightKg: formData.get('weightKg')?.toString(),

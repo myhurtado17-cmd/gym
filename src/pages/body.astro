@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { BodyChart } from '@/components/body/BodyChart';
+import CsrfInput from '@/components/security/CsrfInput.astro';
 import { calculateBMI } from '@/lib/body/bmi';
 import { getBodyWeightSeries, listBodyMetrics } from '@/lib/body/queries';
 import { formatNumber } from '@/lib/number';
@@ -57,6 +58,7 @@ const points = series
         <CardContent>
           {error ? <p class="mb-3 text-sm text-destructive">{error}</p> : null}
           <form method="post" action="/api/body/upsert" class="grid gap-4">
+            <CsrfInput />
             <div class="grid gap-2">
               <Label htmlFor="date">Date</Label>
               <Input id="date" name="date" type="date" required defaultValue={toISODate(today)} />
@@ -159,6 +161,7 @@ const points = series
                     </p>
                   </div>
                   <form method="post" action="/api/body/delete">
+                    <CsrfInput />
                     <input type="hidden" name="date" value={toISODate(m.date)} />
                     <Button type="submit" variant="ghost">Delete</Button>
                   </form>

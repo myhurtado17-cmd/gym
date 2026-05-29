@@ -2,22 +2,152 @@
 import AppLayout from '@/layouts/AppLayout.astro';
 import Shell from '@/components/shell/Shell.astro';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import CsrfInput from '@/components/security/CsrfInput.astro';
+import { listGoals } from '@/lib/goals/queries';
+import { toISODate, startOfDay } from '@/lib/date';
+import { formatNumber } from '@/lib/number';
 
 if (!Astro.locals.user) {
   return Astro.redirect('/login');
 }
+
+const userId = Astro.locals.user.id;
+const error = Astro.url.searchParams.get('error');
+
+const goals = await listGoals(userId, 50).catch(() => []);
+const today = startOfDay(new Date());
 ---
 
 <AppLayout title="Gym | Goals">
   <Shell title="Goals" subtitle="Targets and milestones">
-    <Card>
-      <CardHeader>
-        <CardTitle>Goal tracking</CardTitle>
-        <CardDescription>Weight goal, macro goal, strength goals.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p class="text-sm text-muted-foreground">Scaffold page.</p>
-      </CardContent>
-    </Card>
+    <div class="grid gap-4 lg:grid-cols-12">
+      <Card className="glass lg:col-span-6">
+        <CardHeader>
+          <CardTitle>Create goal</CardTitle>
+          <CardDescription>
+            Nutrition targets: use <code class="font-mono">CALORIES</code> (kcal) and <code class="font-mono">MACROS</code> with unit
+            <code class="font-mono">protein</code>/<code class="font-mono">carbs</code>/<code class="font-mono">fat</code>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error ? <p class="mb-3 text-sm text-destructive">{error}</p> : null}
+          <form method="post" action="/api/goals/upsert" class="grid gap-3">
+            <CsrfInput />
+            <div class="grid gap-1">
+              <label class="text-xs text-muted-foreground" for="type">Type</label>
+              <select
+                id="type"
+                name="type"
+                class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                required
+              >
+                <option value="WEIGHT">WEIGHT</option>
+                <option value="BODY_FAT">BODY_FAT</option>
+                <option value="CALORIES">CALORIES</option>
+                <option value="MACROS">MACROS</option>
+                <option value="STRENGTH">STRENGTH</option>
+              </select>
+            </div>
+            <div class="grid gap-1">
+              <label class="text-xs text-muted-foreground" for="title">Title</label>
+              <Input id="title" name="title" placeholder="Cut: 2300 kcal" required />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="grid gap-1">
+                <label class="text-xs text-muted-foreground" for="targetValue">Target value</label>
+                <Input id="targetValue" name="targetValue" placeholder="2300" />
+              </div>
+              <div class="grid gap-1">
+                <label class="text-xs text-muted-foreground" for="unit">Unit (optional)</label>
+                <Input id="unit" name="unit" placeholder="kcal / protein / kg" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="grid gap-1">
+                <label class="text-xs text-muted-foreground" for="startsAt">Start</label>
+                <Input id="startsAt" name="startsAt" type="date" required defaultValue={toISODate(today)} />
+              </div>
+              <div class="grid gap-1">
+                <label class="text-xs text-muted-foreground" for="endsAt">End (optional)</label>
+                <Input id="endsAt" name="endsAt" type="date" />
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <Button type="submit" variant="secondary">Save goal</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="lg:col-span-6">
+        <CardHeader>
+          <CardTitle>Your goals</CardTitle>
+          <CardDescription>Most recent first.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {goals.length ? (
+            <div class="grid gap-3">
+              {goals.map((g) => (
+                <div class="rounded-lg border border-border/60 bg-background/30 p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-semibold">{g.title}</p>
+                      <p class="text-xs text-muted-foreground">
+                        {g.type}
+                        {g.targetValue != null ? ` · target ${formatNumber(g.targetValue, { maximumFractionDigits: 1 })}` : ''}
+                        {g.unit ? ` ${g.unit}` : ''}
+                        {` · ${toISODate(g.startsAt)}`}
+                        {g.endsAt ? ` → ${toISODate(g.endsAt)}` : ''}
+                      </p>
+                    </div>
+                    <form method="post" action="/api/goals/delete">
+                      <CsrfInput />
+                      <input type="hidden" name="id" value={g.id} />
+                      <Button type="submit" variant="ghost" size="sm">Delete</Button>
+                    </form>
+                  </div>
+
+                  <Separator className="my-3" />
+
+                  <form method="post" action="/api/goals/upsert" class="grid gap-2 sm:grid-cols-2">
+                    <CsrfInput />
+                    <input type="hidden" name="id" value={g.id} />
+                    <input type="hidden" name="type" value={g.type} />
+                    <div class="grid gap-1 sm:col-span-2">
+                      <label class="text-xs text-muted-foreground" for={`title-${g.id}`}>Title</label>
+                      <Input id={`title-${g.id}`} name="title" required defaultValue={g.title} />
+                    </div>
+                    <div class="grid gap-1">
+                      <label class="text-xs text-muted-foreground" for={`target-${g.id}`}>Target</label>
+                      <Input id={`target-${g.id}`} name="targetValue" defaultValue={g.targetValue ?? ''} />
+                    </div>
+                    <div class="grid gap-1">
+                      <label class="text-xs text-muted-foreground" for={`unit-${g.id}`}>Unit</label>
+                      <Input id={`unit-${g.id}`} name="unit" defaultValue={g.unit ?? ''} />
+                    </div>
+                    <div class="grid gap-1">
+                      <label class="text-xs text-muted-foreground" for={`start-${g.id}`}>Start</label>
+                      <Input id={`start-${g.id}`} name="startsAt" type="date" required defaultValue={toISODate(g.startsAt)} />
+                    </div>
+                    <div class="grid gap-1">
+                      <label class="text-xs text-muted-foreground" for={`end-${g.id}`}>End</label>
+                      <Input id={`end-${g.id}`} name="endsAt" type="date" defaultValue={g.endsAt ? toISODate(g.endsAt) : ''} />
+                    </div>
+                    <div class="flex justify-end sm:col-span-2">
+                      <Button type="submit" variant="outline" size="sm">Update</Button>
+                    </div>
+                  </form>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p class="text-sm text-muted-foreground">No goals yet.</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   </Shell>
 </AppLayout>

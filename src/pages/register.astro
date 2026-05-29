@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import CsrfInput from '@/components/security/CsrfInput.astro';
 
 const error = Astro.url.searchParams.get('error');
 ---
@@ -23,6 +24,7 @@ const error = Astro.url.searchParams.get('error');
         <CardContent>
           {error ? <p class="mb-4 text-sm text-destructive">{error}</p> : null}
           <form method="post" action="/api/auth/register" class="grid gap-4">
+            <CsrfInput />
             <div class="grid gap-2">
               <Label htmlFor="name">Name</Label>
               <Input id="name" name="name" type="text" autoComplete="name" />

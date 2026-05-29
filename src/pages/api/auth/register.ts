@@ -3,7 +3,11 @@ import { z } from 'zod';
 
 import { prisma } from '@/lib/db';
 import { hashPassword } from '@/lib/auth/password';
-import { createSession, setSessionCookie } from '@/lib/auth/session';
+import { createSession, invalidateSession, setSessionCookie } from '@/lib/auth/session';
+import { requireCsrf } from '@/lib/security/api';
+import { CSRF_FIELD_NAME } from '@/lib/security/csrf';
+import { getClientIp, rateLimit } from '@/lib/security/rateLimit';
+import { SESSION_COOKIE_NAME } from '@/lib/auth/constants';
 
 const RegisterSchema = z.object({
   name: z.string().trim().min(1).max(80).optional().or(z.literal('')),
@@ -13,6 +17,9 @@ const RegisterSchema = z.object({
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const formData = await request.formData();
+  if (!requireCsrf(cookies, formData.get(CSRF_FIELD_NAME))) {
+    return redirect(`/register?error=${encodeURIComponent('Invalid session')}`);
+  }
   const parsed = RegisterSchema.safeParse({
     name: formData.get('name')?.toString(),
     email: formData.get('email')?.toString(),
@@ -23,6 +30,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   const email = parsed.data.email.toLowerCase();
   const name = parsed.data.name?.trim() ? parsed.data.name.trim() : null;
+
+  const ip = getClientIp(request);
+  const limit = rateLimit({ key: `register:${ip}`, windowMs: 60_000, max: 5 });
+  if (!limit.allowed) {
+    return redirect(`/register?error=${encodeURIComponent('Too many attempts. Try again in a minute.')}`);
+  }
 
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) return redirect(`/register?error=${encodeURIComponent('Email already in use')}`);
@@ -36,6 +49,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       profile: { create: {} }
     }
   });
+
+  const existingToken = cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (existingToken) await invalidateSession(existingToken);
 
   const session = await createSession(user.id);
   setSessionCookie(cookies, session.token, session.expiresAt);

@@ -1,0 +1,213 @@
+---
+import AppLayout from '@/layouts/AppLayout.astro';
+import Shell from '@/components/shell/Shell.astro';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import CsrfInput from '@/components/security/CsrfInput.astro';
+
+import { getNutritionDay, listNutritionDays } from '@/lib/nutrition/queries';
+import { parseISODate, startOfDay, toISODate } from '@/lib/date';
+import { formatNumber } from '@/lib/number';
+import { getActiveNutritionTargets } from '@/lib/nutrition/goals';
+import ProgressBar from '@/components/nutrition/ProgressBar.astro';
+import { CaloriesChart } from '@/components/nutrition/CaloriesChart';
+import { getCaloriesSeries } from '@/lib/nutrition/trends';
+
+if (!Astro.locals.user) return Astro.redirect('/login');
+
+const userId = Astro.locals.user.id;
+const error = Astro.url.searchParams.get('error');
+const dateParam = Astro.url.searchParams.get('date');
+const selectedDate = startOfDay(dateParam ? (parseISODate(dateParam) ?? new Date()) : new Date());
+
+const [day, recentDays, caloriesSeries] = await Promise.all([
+  getNutritionDay(userId, selectedDate).catch(() => null),
+  listNutritionDays(userId, 14).catch(() => []),
+  getCaloriesSeries(userId, 7).catch(() => [])
+]);
+
+const targets = await getActiveNutritionTargets(userId).catch(() => ({
+  calories: null,
+  proteinG: null,
+  carbsG: null,
+  fatG: null
+}));
+
+const totals = day
+  ? {
+      calories: day.calories,
+      proteinG: day.proteinG,
+      carbsG: day.carbsG,
+      fatG: day.fatG
+    }
+  : { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 };
+
+const calPoints = caloriesSeries.map((p) => ({
+  label: toISODate(p.date).slice(5),
+  calories: p.calories
+}));
+---
+
+<AppLayout title="Gym | Nutrition">
+  <Shell title="Nutrition" subtitle="Calories and macros">
+    <div class="grid gap-4 lg:grid-cols-12">
+      <Card className="glass lg:col-span-7">
+        <CardHeader>
+          <CardTitle>Day log</CardTitle>
+          <CardDescription>Track meals and macros for a specific date.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error ? <p class="mb-3 text-sm text-destructive">{error}</p> : null}
+
+          <form method="get" action="/nutrition" class="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div class="grid flex-1 gap-1">
+              <label class="text-xs text-muted-foreground" for="date">Date</label>
+              <Input id="date" name="date" type="date" required defaultValue={toISODate(selectedDate)} />
+            </div>
+            <Button type="submit" variant="outline">Go</Button>
+          </form>
+
+          <Separator className="my-4" />
+
+          <div class="grid gap-3 sm:grid-cols-4">
+            <div class="rounded-lg border border-border/60 bg-background/30 px-3 py-2">
+              <p class="text-xs text-muted-foreground">Calories</p>
+              <p class="text-sm font-semibold">{formatNumber(totals.calories)}</p>
+            </div>
+            <div class="rounded-lg border border-border/60 bg-background/30 px-3 py-2">
+              <p class="text-xs text-muted-foreground">Protein (g)</p>
+              <p class="text-sm font-semibold">{formatNumber(totals.proteinG)}</p>
+            </div>
+            <div class="rounded-lg border border-border/60 bg-background/30 px-3 py-2">
+              <p class="text-xs text-muted-foreground">Carbs (g)</p>
+              <p class="text-sm font-semibold">{formatNumber(totals.carbsG)}</p>
+            </div>
+            <div class="rounded-lg border border-border/60 bg-background/30 px-3 py-2">
+              <p class="text-xs text-muted-foreground">Fat (g)</p>
+              <p class="text-sm font-semibold">{formatNumber(totals.fatG)}</p>
+            </div>
+          </div>
+
+          <div class="mt-4 grid gap-3">
+            <ProgressBar label="Calories" value={totals.calories} target={targets.calories} unit="kcal" />
+            <ProgressBar label="Protein" value={totals.proteinG} target={targets.proteinG} unit="g" />
+            <ProgressBar label="Carbs" value={totals.carbsG} target={targets.carbsG} unit="g" />
+            <ProgressBar label="Fat" value={totals.fatG} target={targets.fatG} unit="g" />
+          </div>
+
+          <Separator className="my-4" />
+
+          <Card className="border-border/60 bg-background/10">
+            <CardHeader>
+              <CardTitle>Add entry</CardTitle>
+              <CardDescription>One row per food or meal.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form method="post" action="/api/nutrition/entry/add" class="grid gap-3">
+                <CsrfInput />
+                <input type="hidden" name="date" value={toISODate(selectedDate)} />
+                <div class="grid gap-1">
+                  <label class="text-xs text-muted-foreground" for="mealName">Meal / Item</label>
+                  <Input id="mealName" name="mealName" placeholder="Chicken + rice" required />
+                </div>
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div class="grid gap-1">
+                    <label class="text-xs text-muted-foreground" for="calories">Calories</label>
+                    <Input id="calories" name="calories" inputMode="numeric" placeholder="650" required />
+                  </div>
+                  <div class="grid gap-1">
+                    <label class="text-xs text-muted-foreground" for="proteinG">Protein</label>
+                    <Input id="proteinG" name="proteinG" inputMode="numeric" placeholder="45" required />
+                  </div>
+                  <div class="grid gap-1">
+                    <label class="text-xs text-muted-foreground" for="carbsG">Carbs</label>
+                    <Input id="carbsG" name="carbsG" inputMode="numeric" placeholder="70" required />
+                  </div>
+                  <div class="grid gap-1">
+                    <label class="text-xs text-muted-foreground" for="fatG">Fat</label>
+                    <Input id="fatG" name="fatG" inputMode="numeric" placeholder="18" required />
+                  </div>
+                </div>
+                <div class="grid gap-1">
+                  <label class="text-xs text-muted-foreground" for="notes">Notes</label>
+                  <Input id="notes" name="notes" placeholder="optional" />
+                </div>
+                <div class="flex justify-end">
+                  <Button type="submit" variant="secondary">Add</Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Separator className="my-4" />
+
+          <div class="grid gap-2">
+            <p class="text-sm font-semibold">Entries</p>
+            {day?.entries?.length ? (
+              <div class="grid gap-2">
+                {day.entries.map((e) => (
+                  <div class="flex items-start justify-between gap-3 rounded-lg border border-border/60 bg-background/30 px-3 py-2">
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-medium">{e.mealName}</p>
+                      <p class="text-xs text-muted-foreground">
+                        {e.calories} kcal · P {e.proteinG} · C {e.carbsG} · F {e.fatG}
+                        {e.notes ? ` · ${e.notes}` : ''}
+                      </p>
+                    </div>
+                    <form method="post" action="/api/nutrition/entry/delete">
+                      <CsrfInput />
+                      <input type="hidden" name="entryId" value={e.id} />
+                      <Button type="submit" variant="ghost" size="sm">Delete</Button>
+                    </form>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p class="text-sm text-muted-foreground">No entries for this day.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="lg:col-span-5">
+        <CardHeader>
+          <CardTitle>Recent days</CardTitle>
+          <CardDescription>Quick jump and consistency checks.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div class="mb-4">
+            <p class="text-sm font-semibold">7-day calories</p>
+            <div class="mt-2 h-[160px]">
+              <CaloriesChart client:load points={calPoints} />
+            </div>
+          </div>
+          {recentDays.length ? (
+            <div class="grid gap-2">
+              {recentDays.map((d) => (
+                <a
+                  href={`/nutrition?date=${encodeURIComponent(toISODate(d.date))}`}
+                  class="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/30 px-3 py-2 text-sm hover:bg-accent"
+                >
+                  <div class="min-w-0">
+                    <p class="truncate font-medium">{toISODate(d.date)}</p>
+                    <p class="text-xs text-muted-foreground">{d._count.entries} entries</p>
+                  </div>
+                  <p class="text-xs text-muted-foreground">{d.calories} kcal</p>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p class="text-sm text-muted-foreground">No days logged yet.</p>
+          )}
+          <div class="mt-4">
+            <Button asChild variant="outline" className="w-full">
+              <a href="/nutrition/import">Paste import</a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  </Shell>
+</AppLayout>

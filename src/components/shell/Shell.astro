@@ -6,6 +6,7 @@ import NavLink from '@/components/nav/NavLink.astro';
 import { navItems } from '@/components/nav/nav';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Button } from '@/components/ui/button';
+import CsrfInput from '@/components/security/CsrfInput.astro';
 
 type Props = {
   title?: string;
@@ -53,6 +54,7 @@ const user = Astro.locals.user;
           {user ? <p class="hidden text-xs text-muted-foreground sm:block">{user.email}</p> : null}
           <ThemeToggle client:load />
           <form method="post" action="/api/auth/logout">
+            <CsrfInput />
             <Button type="submit" variant="outline" className="hidden sm:inline-flex">
               Logout
             </Button>

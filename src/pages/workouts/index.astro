@@ -1,0 +1,106 @@
+---
+import AppLayout from '@/layouts/AppLayout.astro';
+import Shell from '@/components/shell/Shell.astro';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import CsrfInput from '@/components/security/CsrfInput.astro';
+import { listRoutines } from '@/lib/workouts/queries';
+import { formatDateTime } from '@/lib/datetime';
+import { listRecentSessions } from '@/lib/workouts/sessions';
+
+if (!Astro.locals.user) return Astro.redirect('/login');
+
+const routines = await listRoutines(Astro.locals.user.id).catch(() => []);
+const recent = await listRecentSessions(Astro.locals.user.id, 8).catch(() => []);
+---
+
+<AppLayout title="Gym | Workouts">
+  <Shell title="Workouts" subtitle="Routines, logs, and PRs">
+    <div class="flex flex-col gap-4">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="text-sm font-semibold">Routines</p>
+          <p class="text-xs text-muted-foreground">Create a routine by pasting your program.</p>
+        </div>
+        <Button asChild>
+          <a href="/workouts/import">Import from paste</a>
+        </Button>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-12">
+        <div class="lg:col-span-7">
+          {routines.length ? (
+            <div class="grid gap-4 md:grid-cols-2">
+              {routines.map((r) => (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>
+                      <a class="hover:underline" href={`/workouts/routines/${r.id}`}>{r.name}</a>
+                    </CardTitle>
+                    <CardDescription>
+                      {r._count.days} {r._count.days === 1 ? 'day' : 'days'} · Updated {formatDateTime(r.updatedAt)}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div class="flex gap-2">
+                      <Button asChild variant="secondary" size="sm">
+                        <a href={`/workouts/routines/${r.id}`}>View</a>
+                      </Button>
+                      <form method="post" action="/api/workouts/sessions/start">
+                        <CsrfInput />
+                        <input type="hidden" name="routineId" value={r.id} />
+                        <Button type="submit" variant="outline" size="sm">Start</Button>
+                      </form>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>No routines yet</CardTitle>
+                <CardDescription>Paste your current plan and we’ll structure it into days and exercises.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild>
+                  <a href="/workouts/import">Import your first routine</a>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <Card className="glass lg:col-span-5">
+          <CardHeader>
+            <CardTitle>Recent sessions</CardTitle>
+            <CardDescription>Your latest logs</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recent.length ? (
+              <div class="grid gap-2">
+                {recent.map((s) => (
+                  <a
+                    href={`/workouts/sessions/${s.id}`}
+                    class="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/30 px-3 py-2 text-sm hover:bg-accent"
+                  >
+                    <div class="min-w-0">
+                      <p class="truncate font-medium">
+                        {s.routine?.name ?? 'Session'}
+                        {s.day?.name ? ` · ${s.day.name}` : ''}
+                      </p>
+                      <p class="text-xs text-muted-foreground">{formatDateTime(s.date)}</p>
+                    </div>
+                    <p class="text-xs text-muted-foreground">{s._count.setLogs} sets</p>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p class="text-sm text-muted-foreground">No sessions logged yet.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  </Shell>
+</AppLayout>

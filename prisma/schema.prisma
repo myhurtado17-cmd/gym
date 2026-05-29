@@ -163,7 +163,9 @@ model WorkoutSession {
   dayId     String?
   date      DateTime @default(now())
   notes     String?
+  completedAt DateTime?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   routine WorkoutRoutine? @relation(fields: [routineId], references: [id], onDelete: SetNull)
@@ -190,6 +192,7 @@ model WorkoutSetLog {
 
   @@index([sessionId])
   @@index([exerciseId, createdAt])
+  @@unique([sessionId, exerciseId, setNumber])
 }
 
 model Meal {

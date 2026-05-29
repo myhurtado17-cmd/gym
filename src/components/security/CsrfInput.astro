@@ -1,0 +1,8 @@
+---
+import { CSRF_FIELD_NAME, ensureCsrfCookie, getCsrfFormValue } from '@/lib/security/csrf';
+
+const token = ensureCsrfCookie(Astro.cookies);
+const value = getCsrfFormValue(token);
+---
+
+<input type="hidden" name={CSRF_FIELD_NAME} value={value} />

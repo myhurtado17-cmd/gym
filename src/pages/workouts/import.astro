@@ -1,0 +1,55 @@
+---
+import AppLayout from '@/layouts/AppLayout.astro';
+import Shell from '@/components/shell/Shell.astro';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import CsrfInput from '@/components/security/CsrfInput.astro';
+
+if (!Astro.locals.user) return Astro.redirect('/login');
+
+const error = Astro.url.searchParams.get('error');
+---
+
+<AppLayout title="Gym | Import Routine">
+  <Shell title="Import routine" subtitle="Paste your program and we’ll parse it">
+    <div class="mx-auto w-full max-w-2xl">
+      <Card>
+        <CardHeader>
+          <CardTitle>Paste import</CardTitle>
+          <CardDescription>
+            Use one day heading per block, then one exercise per line.
+            Example: <code class="font-mono">Day 1: Push</code> then <code class="font-mono">Bench Press - 4x8</code>.
+          </CardDescription>
+        </CardHeader>
+        <form method="post" action="/api/workouts/import" class="contents">
+          <CardContent className="grid gap-3">
+            <CsrfInput />
+            {error ? <p class="text-sm text-destructive">Couldn’t import. Check name and text.</p> : null}
+            <div class="grid gap-1.5">
+              <label class="text-sm font-medium" for="name">Routine name</label>
+              <Input id="name" name="name" placeholder="Push Pull Legs" required />
+            </div>
+            <div class="grid gap-1.5">
+              <label class="text-sm font-medium" for="text">Routine text</label>
+              <textarea
+                id="text"
+                name="text"
+                required
+                rows={14}
+                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                placeholder={`Day 1: Push\nBench Press - 4x8\nIncline DB Press - 3x10\n\nDay 2: Pull\nPull-ups - 4x6-10 # add weight when 10\nBarbell Row - 4x8`}
+              />
+            </div>
+          </CardContent>
+          <CardFooter className="flex items-center justify-between">
+            <Button asChild variant="ghost">
+              <a href="/workouts">Back</a>
+            </Button>
+            <Button type="submit">Import</Button>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
+  </Shell>
+</AppLayout>

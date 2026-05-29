@@ -1,0 +1,29 @@
+---
+type Props = {
+  label: string;
+  value: number;
+  target: number | null;
+  unit?: string;
+};
+
+const { label, value, target, unit } = Astro.props;
+const pct = target && target > 0 ? Math.min(1, value / target) : 0;
+const pctText = target && target > 0 ? `${Math.round(pct * 100)}%` : '—';
+---
+
+<div class="grid gap-1">
+  <div class="flex items-center justify-between text-xs">
+    <p class="text-muted-foreground">{label}</p>
+    <p class="text-muted-foreground">
+      {value}{unit ? ` ${unit}` : ''}
+      {target != null ? ` / ${target}${unit ? ` ${unit}` : ''}` : ''}
+      {target != null ? ` (${pctText})` : ''}
+    </p>
+  </div>
+  <div class="h-2 w-full overflow-hidden rounded-full border border-border/60 bg-background/30">
+    <div
+      class="h-full rounded-full bg-primary transition-[width]"
+      style={`width: ${Math.round(pct * 100)}%`}
+    ></div>
+  </div>
+</div>

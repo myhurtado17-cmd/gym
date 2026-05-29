@@ -1,0 +1,56 @@
+---
+import AppLayout from '@/layouts/AppLayout.astro';
+import Shell from '@/components/shell/Shell.astro';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { parseISODate, startOfDay, toISODate } from '@/lib/date';
+import CsrfInput from '@/components/security/CsrfInput.astro';
+
+if (!Astro.locals.user) return Astro.redirect('/login');
+
+const error = Astro.url.searchParams.get('error');
+const dateParam = Astro.url.searchParams.get('date');
+const selectedDate = startOfDay(dateParam ? (parseISODate(dateParam) ?? new Date()) : new Date());
+---
+
+<AppLayout title="Gym | Nutrition Import">
+  <Shell title="Import diet" subtitle="Paste a day or plan">
+    <div class="mx-auto w-full max-w-2xl">
+      <Card>
+        <CardHeader>
+          <CardTitle>Paste import</CardTitle>
+          <CardDescription>One entry per line: <code class="font-mono">Name | 650 P45 C70 F18</code></CardDescription>
+        </CardHeader>
+        <form method="post" action="/api/nutrition/import" class="contents">
+          <CardContent>
+            <CsrfInput />
+            {error ? <p class="mb-3 text-sm text-destructive">{error}</p> : null}
+            <div class="grid gap-2">
+              <label class="text-sm font-medium" for="date">Date</label>
+              <Input id="date" name="date" type="date" required defaultValue={toISODate(selectedDate)} />
+            </div>
+            <div class="mt-3 grid gap-2">
+              <label class="text-sm font-medium" for="text">Text</label>
+              <textarea
+                id="text"
+                name="text"
+                required
+                rows={12}
+                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                placeholder={`Oatmeal | 450 P20 C65 F12\nChicken + rice | 650 P45 C70 F18 # post-workout\nGreek yogurt | 180 P18 C12 F6`}
+              />
+              <p class="text-xs text-muted-foreground">Supports separators: <code class="font-mono">|</code>, <code class="font-mono">-</code>, <code class="font-mono">:</code>. Macros: <code class="font-mono">P</code>/<code class="font-mono">C</code>/<code class="font-mono">F</code>.</p>
+            </div>
+          </CardContent>
+          <CardFooter className="flex items-center justify-between">
+            <Button asChild variant="ghost">
+              <a href="/nutrition">Back</a>
+            </Button>
+            <Button type="submit" variant="secondary">Import</Button>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
+  </Shell>
+</AppLayout>
