@@ -12,8 +12,12 @@ function createPrismaClient() {
     throw new Error('DATABASE_URL is missing. Set it in your environment variables (Vercel Project Settings).');
   }
 
-  // Prisma v7 may require passing `datasourceUrl` when the schema datasource url is not in schema.prisma.
-  return new PrismaClientCtor({ datasourceUrl });
+  // Override the primary datasource URL at runtime.
+  return new PrismaClientCtor({
+    datasources: {
+      db: { url: datasourceUrl }
+    }
+  });
 }
 
 declare global {
