@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { requireApiSession } from '@/lib/auth/api';
 import { prisma } from '@/lib/db';
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { requireCsrf } from '@/lib/security/api';
 import { CSRF_FIELD_NAME } from '@/lib/security/csrf';
 
@@ -75,14 +75,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       exerciseId,
       setNumber,
       reps: reps ?? null,
-      weightKg: weightKg == null ? null : new Prisma.Decimal(weightKg),
-      rpe: rpe == null ? null : new Prisma.Decimal(rpe),
+      // Prisma will coerce number -> Decimal.
+      weightKg: (weightKg ?? null) as unknown as Prisma.Decimal | null,
+      rpe: (rpe ?? null) as unknown as Prisma.Decimal | null,
       notes: notes ?? null
     },
     update: {
       reps: reps ?? null,
-      weightKg: weightKg == null ? null : new Prisma.Decimal(weightKg),
-      rpe: rpe == null ? null : new Prisma.Decimal(rpe),
+      weightKg: (weightKg ?? null) as unknown as Prisma.Decimal | null,
+      rpe: (rpe ?? null) as unknown as Prisma.Decimal | null,
       notes: notes ?? null
     }
   });

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { requireApiSession } from '@/lib/auth/api';
 import { prisma } from '@/lib/db';
 import { parseISODate, startOfDay, toISODate } from '@/lib/date';
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { requireCsrf } from '@/lib/security/api';
 import { CSRF_FIELD_NAME } from '@/lib/security/csrf';
 
@@ -23,7 +23,7 @@ function parseNullableDecimalString(s: string | undefined) {
   if (!v) return null;
   const n = Number(v);
   if (!Number.isFinite(n)) return null;
-  return new Prisma.Decimal(n);
+  return n as unknown as Prisma.Decimal;
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
