@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { searchByName } from '@/lib/workoutx/client';
+import { searchByName, getById } from '@/lib/workoutx/client';
 import { requireApiSession } from '@/lib/auth/api';
 
 export const GET: APIRoute = async ({ url, cookies }) => {
@@ -11,9 +11,27 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     });
   }
 
+  const id = url.searchParams.get('id')?.trim();
+
+  if (id) {
+    try {
+      const result = await getById(id);
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Error desconocido';
+      return new Response(JSON.stringify({ error: message }), {
+        status: 502,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
   const name = url.searchParams.get('name')?.trim();
   if (!name) {
-    return new Response(JSON.stringify({ error: 'Se requiere el parámetro "name"' }), {
+    return new Response(JSON.stringify({ error: 'Se requiere "name" o "id"' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
