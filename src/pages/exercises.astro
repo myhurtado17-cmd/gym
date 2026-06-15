@@ -5,8 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import CsrfInput from '@/components/security/CsrfInput.astro';
 import { prisma } from '@/lib/db';
+import { listRoutines } from '@/lib/workouts/queries';
 
 if (!Astro.locals.user) {
   return Astro.redirect('/login');
@@ -16,11 +18,16 @@ const error = Astro.url.searchParams.get('error');
 const updated = Astro.url.searchParams.get('updated');
 const deleted = Astro.url.searchParams.get('deleted');
 
-const exercises = await prisma.exercise.findMany({
-  where: { userId: Astro.locals.user.id },
-  orderBy: { name: 'asc' },
-  include: { _count: { select: { routineItems: true, setLogs: true } } }
-});
+const userId = Astro.locals.user.id;
+
+const [exercises, routines] = await Promise.all([
+  prisma.exercise.findMany({
+    where: { userId },
+    orderBy: { name: 'asc' },
+    include: { _count: { select: { routineItems: true, setLogs: true } } }
+  }),
+  listRoutines(userId).catch(() => [])
+]);
 ---
 
 <AppLayout title="GymTracker | Ejercicios">
@@ -44,6 +51,57 @@ const exercises = await prisma.exercise.findMany({
                 <p class="mb-3 text-xs text-muted-foreground">
                   {ex._count.routineItems} rutinas · {ex._count.setLogs} series registradas
                 </p>
+
+                <!-- Añadir a rutina -->
+                <details class="group mb-2">
+                  <summary class="cursor-pointer text-xs font-medium text-primary hover:underline">Añadir a rutina</summary>
+                  <div class="mt-3">
+                    <form method="post" action="/api/exercises/add-to-routine" class="grid gap-3">
+                      <CsrfInput />
+                      <input type="hidden" name="exerciseId" value={ex.id} />
+
+                      <div class="grid gap-1">
+                        <Label for={`existing-${ex.id}`}>Rutina existente</Label>
+                        <select
+                          id={`existing-${ex.id}`}
+                          name="routineId"
+                          class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                        >
+                          <option value="">— Elegir rutina —</option>
+                          {routines.map((r) => (
+                            <option key={r.id} value={r.id}>{r.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <Separator class="my-1" />
+
+                      <div class="grid gap-1">
+                        <Label for={`new-name-${ex.id}`}>O crear nueva rutina</Label>
+                        <Input id={`new-name-${ex.id}`} name="newRoutineName" placeholder="Nombre de la rutina" />
+                      </div>
+                      <div class="grid gap-1">
+                        <Label for={`new-day-${ex.id}`}>Nombre del día</Label>
+                        <Input id={`new-day-${ex.id}`} name="newDayName" placeholder="Día 1" />
+                      </div>
+
+                      <div class="grid grid-cols-2 gap-2">
+                        <div class="grid gap-1">
+                          <Label for={`sets-${ex.id}`}>Series</Label>
+                          <Input id={`sets-${ex.id}`} name="targetSets" inputMode="numeric" placeholder="4" />
+                        </div>
+                        <div class="grid gap-1">
+                          <Label for={`reps-${ex.id}`}>Reps</Label>
+                          <Input id={`reps-${ex.id}`} name="targetReps" placeholder="8-12" />
+                        </div>
+                      </div>
+
+                      <Button type="submit" size="sm" variant="secondary">Añadir</Button>
+                    </form>
+                  </div>
+                </details>
+
+                <!-- Editar -->
                 <details class="group">
                   <summary class="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Editar</summary>
                   <div class="mt-3">

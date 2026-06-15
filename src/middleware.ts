@@ -4,7 +4,7 @@ import { SESSION_COOKIE_NAME } from '@/lib/auth/constants';
 import { getSessionFromRequest } from '@/lib/auth/session';
 import { ensureCsrfCookie } from '@/lib/security/csrf';
 
-const PROTECTED_PREFIXES = ['/dashboard', '/workouts', '/nutrition', '/body', '/goals', '/settings'];
+const PROTECTED_PREFIXES = ['/dashboard', '/workouts', '/nutrition', '/body', '/goals', '/settings', '/exercises'];
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url, cookies, locals, redirect } = context;
