@@ -16,6 +16,9 @@ export default defineConfig({
   adapter: vercel(),
 
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
+    ssr: {
+      external: ['@prisma/adapter-pg', 'pg']
+    }
   }
 });
