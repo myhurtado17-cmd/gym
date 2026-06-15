@@ -25,6 +25,11 @@ interface WorkoutXSearchResponse {
   data: WorkoutXExercise[];
 }
 
+export interface WorkoutXListResult {
+  total: number;
+  data: WorkoutXExercise[];
+}
+
 const BASE_URL = 'https://api.workoutxapp.com/v1';
 
 function getKey(): string {
@@ -45,6 +50,11 @@ async function request<T>(path: string): Promise<T> {
   }
 
   return res.json();
+}
+
+export async function listExercises(offset = 0, limit = 10): Promise<WorkoutXListResult> {
+  const res = await request<WorkoutXSearchResponse>(`/exercises?offset=${offset}&limit=${limit}`);
+  return { total: res.total, data: res.data };
 }
 
 export async function searchByName(name: string): Promise<WorkoutXExercise[]> {

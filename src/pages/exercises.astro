@@ -19,6 +19,7 @@ const error = Astro.url.searchParams.get('error');
 const updated = Astro.url.searchParams.get('updated');
 const deleted = Astro.url.searchParams.get('deleted');
 const linked = Astro.url.searchParams.get('linked');
+const imported = Astro.url.searchParams.get('imported');
 
 const userId = Astro.locals.user.id;
 
@@ -50,259 +51,341 @@ function parseJson(str: string | null): string[] {
       {updated ? <p class="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-600 dark:text-green-400">Ejercicio actualizado.</p> : null}
       {deleted ? <p class="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-600 dark:text-green-400">Ejercicio eliminado.</p> : null}
       {linked ? <p class="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-600 dark:text-green-400">Ejercicio vinculado con WorkoutX.</p> : null}
+      {imported ? <p class="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-600 dark:text-green-400">Ejercicio importado desde WorkoutX.</p> : null}
       {error === 'not_found' ? <p class="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">Ejercicio no encontrado.</p> : null}
       {error === 'workoutx_not_found' ? <p class="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">Ejercicio no encontrado en WorkoutX.</p> : null}
 
-      {exercises.length ? (
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {exercises.map((ex) => {
-            const instructions = parseJson(ex.instructions);
-            const secondaryMuscles = parseJson(ex.secondaryMuscles);
-            return (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {ex.name}
-                    {ex.workoutxId ? <span class="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">WX</span> : null}
-                  </CardTitle>
-                  <CardDescription>
-                    {[ex.muscle, ex.equipment].filter(Boolean).join(' · ') || 'Sin detalles'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p class="mb-3 text-xs text-muted-foreground">
-                    {ex._count.routineItems} rutinas · {ex._count.setLogs} series registradas
-                  </p>
+      <!-- Tabs -->
+      <div class="flex gap-1 rounded-lg border border-border/60 bg-background/50 p-1">
+        <button class="tab-btn flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors" data-tab="mine">
+          Mis ejercicios
+        </button>
+        <button class="tab-btn flex-1 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground" data-tab="catalog">
+          Biblioteca WorkoutX
+        </button>
+      </div>
 
-                  {ex.gifUrl ? (
-                    <div class="mb-3 overflow-hidden rounded-lg bg-muted">
-                      <img src={ex.gifUrl} alt={ex.name} class="w-full object-contain" loading="lazy" />
-                    </div>
-                  ) : null}
+      <!-- Mis ejercicios -->
+      <div id="tab-mine" class="tab-content">
+        {exercises.length ? (
+          <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {exercises.map((ex) => {
+              const instructions = parseJson(ex.instructions);
+              const secondaryMuscles = parseJson(ex.secondaryMuscles);
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      {ex.name}
+                      {ex.workoutxId ? <span class="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">WX</span> : null}
+                    </CardTitle>
+                    <CardDescription>
+                      {[ex.muscle, ex.equipment].filter(Boolean).join(' · ') || 'Sin detalles'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p class="mb-3 text-xs text-muted-foreground">
+                      {ex._count.routineItems} rutinas · {ex._count.setLogs} series registradas
+                    </p>
 
-                  {instructions.length > 0 ? (
-                    <div class="mb-3">
-                      <p class="mb-1 text-xs font-medium">Instrucciones:</p>
-                      <ol class="list-inside list-decimal space-y-0.5 text-xs text-muted-foreground">
-                        {instructions.map((inst) => (
-                          <li>{inst}</li>
-                        ))}
-                      </ol>
-                    </div>
-                  ) : null}
+                    {ex.gifUrl ? (
+                      <div class="mb-3 overflow-hidden rounded-lg bg-muted">
+                        <img src={ex.gifUrl} alt={ex.name} class="w-full object-contain" loading="lazy" />
+                      </div>
+                    ) : null}
 
-                  {secondaryMuscles.length > 0 ? (
-                    <div class="mb-3 text-xs text-muted-foreground">
-                      <span class="font-medium text-foreground">Músculos secundarios:</span>{' '}
-                      {secondaryMuscles.join(', ')}
-                    </div>
-                  ) : null}
+                    {instructions.length > 0 ? (
+                      <div class="mb-3">
+                        <p class="mb-1 text-xs font-medium">Instrucciones:</p>
+                        <ol class="list-inside list-decimal space-y-0.5 text-xs text-muted-foreground">
+                          {instructions.map((inst) => (
+                            <li>{inst}</li>
+                          ))}
+                        </ol>
+                      </div>
+                    ) : null}
 
-                  {ex.targetMuscle ? (
-                    <div class="mb-3 text-xs text-muted-foreground">
-                      <span class="font-medium text-foreground">Músculo objetivo:</span> {ex.targetMuscle}
-                    </div>
-                  ) : null}
+                    {secondaryMuscles.length > 0 ? (
+                      <div class="mb-3 text-xs text-muted-foreground">
+                        <span class="font-medium text-foreground">Músculos secundarios:</span>{' '}
+                        {secondaryMuscles.join(', ')}
+                      </div>
+                    ) : null}
 
-                  <details class="group mb-2">
-                    <summary class="cursor-pointer text-xs font-medium text-primary hover:underline">
-                      WorkoutX {ex.workoutxId ? '✓ Vinculado' : ''}
-                    </summary>
-                    <div class="mt-3">
-                      {ex.workoutxId ? (
-                        <div class="space-y-3">
-                          <p class="text-xs text-muted-foreground">
-                            Vinculado a WorkoutX (ID: {ex.workoutxId})
-                          </p>
-                          <form method="post" action="/api/workoutx/link" class="flex items-center gap-2">
-                            <CsrfInput />
-                            <input type="hidden" name="exerciseId" value={ex.id} />
-                            <input type="hidden" name="workoutxId" value={ex.workoutxId} />
-                            <Button type="submit" size="sm" variant="secondary">Actualizar desde WorkoutX</Button>
-                          </form>
-                        </div>
-                      ) : (
-                        <div>
-                          <button
-                            class="workoutx-search-btn inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent"
-                            data-exercise-id={ex.id}
-                            data-exercise-name={ex.name}
-                          >
-                            Buscar en WorkoutX
-                          </button>
-                          <div class="workoutx-results mt-2 space-y-2" data-exercise-id={ex.id}></div>
-                        </div>
-                      )}
-                    </div>
-                  </details>
+                    {ex.targetMuscle ? (
+                      <div class="mb-3 text-xs text-muted-foreground">
+                        <span class="font-medium text-foreground">Músculo objetivo:</span> {ex.targetMuscle}
+                      </div>
+                    ) : null}
 
-                  <!-- Añadir a rutina -->
-                  <details class="group mb-2">
-                    <summary class="cursor-pointer text-xs font-medium text-primary hover:underline">Añadir a rutina</summary>
-                    <div class="mt-3">
-                      <form method="post" action="/api/exercises/add-to-routine" class="grid gap-3">
-                        <CsrfInput />
-
-                        <input type="hidden" name="exerciseId" value={ex.id} />
-
-                        <div class="grid gap-1">
-                          <Label for={`existing-${ex.id}`}>Rutina existente</Label>
-                          <select
-                            id={`existing-${ex.id}`}
-                            name="routineId"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                          >
-                            <option value="">— Elegir rutina —</option>
-                            {routines.map((r) => (
-                              <option value={r.id}>{r.name}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <Separator class="my-1" />
-
-                        <div class="grid gap-1">
-                          <Label for={`new-name-${ex.id}`}>O crear nueva rutina</Label>
-                          <Input id={`new-name-${ex.id}`} name="newRoutineName" placeholder="Nombre de la rutina" />
-                        </div>
-                        <div class="grid gap-1">
-                          <Label for={`new-day-${ex.id}`}>Nombre del día</Label>
-                          <Input id={`new-day-${ex.id}`} name="newDayName" placeholder="Día 1" />
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-2">
+                    <details class="group mb-2">
+                      <summary class="cursor-pointer text-xs font-medium text-primary hover:underline">Añadir a rutina</summary>
+                      <div class="mt-3">
+                        <form method="post" action="/api/exercises/add-to-routine" class="grid gap-3">
+                          <CsrfInput />
+                          <input type="hidden" name="exerciseId" value={ex.id} />
                           <div class="grid gap-1">
-                            <Label for={`sets-${ex.id}`}>Series</Label>
-                            <Input id={`sets-${ex.id}`} name="targetSets" inputMode="numeric" placeholder="4" />
+                            <Label for={`existing-${ex.id}`}>Rutina existente</Label>
+                            <select
+                              id={`existing-${ex.id}`}
+                              name="routineId"
+                              class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                            >
+                              <option value="">— Elegir rutina —</option>
+                              {routines.map((r) => (
+                                <option value={r.id}>{r.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <Separator class="my-1" />
+                          <div class="grid gap-1">
+                            <Label for={`new-name-${ex.id}`}>O crear nueva rutina</Label>
+                            <Input id={`new-name-${ex.id}`} name="newRoutineName" placeholder="Nombre de la rutina" />
                           </div>
                           <div class="grid gap-1">
-                            <Label for={`reps-${ex.id}`}>Reps</Label>
-                            <Input id={`reps-${ex.id}`} name="targetReps" placeholder="8-12" />
+                            <Label for={`new-day-${ex.id}`}>Nombre del día</Label>
+                            <Input id={`new-day-${ex.id}`} name="newDayName" placeholder="Día 1" />
                           </div>
-                        </div>
+                          <div class="grid grid-cols-2 gap-2">
+                            <div class="grid gap-1">
+                              <Label for={`sets-${ex.id}`}>Series</Label>
+                              <Input id={`sets-${ex.id}`} name="targetSets" inputMode="numeric" placeholder="4" />
+                            </div>
+                            <div class="grid gap-1">
+                              <Label for={`reps-${ex.id}`}>Reps</Label>
+                              <Input id={`reps-${ex.id}`} name="targetReps" placeholder="8-12" />
+                            </div>
+                          </div>
+                          <Button type="submit" size="sm" variant="secondary">Añadir</Button>
+                        </form>
+                      </div>
+                    </details>
 
-                        <Button type="submit" size="sm" variant="secondary">Añadir</Button>
-                      </form>
-                    </div>
-                  </details>
+                    <details class="group">
+                      <summary class="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Editar</summary>
+                      <div class="mt-3">
+                        <form method="post" action="/api/exercises/update" class="grid gap-3">
+                          <CsrfInput />
+                          <input type="hidden" name="id" value={ex.id} />
+                          <div class="grid gap-1">
+                            <Label for={`name-${ex.id}`}>Nombre</Label>
+                            <Input id={`name-${ex.id}`} name="name" required defaultValue={ex.name} />
+                          </div>
+                          <div class="grid grid-cols-2 gap-2">
+                            <div class="grid gap-1">
+                              <Label for={`muscle-${ex.id}`}>Músculo</Label>
+                              <Input id={`muscle-${ex.id}`} name="muscle" defaultValue={ex.muscle ?? ''} />
+                            </div>
+                            <div class="grid gap-1">
+                              <Label for={`equipment-${ex.id}`}>Equipo</Label>
+                              <Input id={`equipment-${ex.id}`} name="equipment" defaultValue={ex.equipment ?? ''} />
+                            </div>
+                          </div>
+                          <div class="flex gap-2">
+                            <Button type="submit" size="sm" variant="secondary">Guardar</Button>
+                            <form method="post" action="/api/exercises/delete">
+                              <CsrfInput />
+                              <input type="hidden" name="id" value={ex.id} />
+                              <Button type="submit" size="sm" variant="ghost" class="text-destructive">Eliminar</Button>
+                            </form>
+                          </div>
+                        </form>
+                      </div>
+                    </details>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Sin ejercicios</CardTitle>
+              <CardDescription>Los ejercicios se crean automáticamente al importar rutinas o iniciar sesiones. También puedes explorar la Biblioteca WorkoutX para importar ejercicios.</CardDescription>
+            </CardHeader>
+          </Card>
+        )}
+      </div>
 
-                  <!-- Editar -->
-                  <details class="group">
-                    <summary class="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Editar</summary>
-                    <div class="mt-3">
-                      <form method="post" action="/api/exercises/update" class="grid gap-3">
-                        <CsrfInput />
-                        <input type="hidden" name="id" value={ex.id} />
-                        <div class="grid gap-1">
-                          <Label for={`name-${ex.id}`}>Nombre</Label>
-                          <Input id={`name-${ex.id}`} name="name" required defaultValue={ex.name} />
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                          <div class="grid gap-1">
-                            <Label for={`muscle-${ex.id}`}>Músculo</Label>
-                            <Input id={`muscle-${ex.id}`} name="muscle" defaultValue={ex.muscle ?? ''} />
-                          </div>
-                          <div class="grid gap-1">
-                            <Label for={`equipment-${ex.id}`}>Equipo</Label>
-                            <Input id={`equipment-${ex.id}`} name="equipment" defaultValue={ex.equipment ?? ''} />
-                          </div>
-                        </div>
-                        <div class="flex gap-2">
-                          <Button type="submit" size="sm" variant="secondary">Guardar</Button>
-                          <form method="post" action="/api/exercises/delete">
-                            <CsrfInput />
-                            <input type="hidden" name="id" value={ex.id} />
-                            <Button type="submit" size="sm" variant="ghost" class="text-destructive">Eliminar</Button>
-                          </form>
-                        </div>
-                      </form>
-                    </div>
-                  </details>
-                </CardContent>
-              </Card>
-            );
-          })}
+      <!-- Biblioteca WorkoutX -->
+      <div id="tab-catalog" class="tab-content hidden">
+        <div class="mb-4 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <input
+              id="wx-search-input"
+              type="text"
+              placeholder="Buscar en WorkoutX..."
+              class="h-9 rounded-md border border-input bg-background px-3 text-sm w-56"
+            />
+            <button id="wx-search-btn" class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90">
+              Buscar
+            </button>
+          </div>
+          <button id="wx-browse-btn" class="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent">
+            Explorar todo
+          </button>
         </div>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Sin ejercicios</CardTitle>
-            <CardDescription>Los ejercicios se crean automáticamente al importar rutinas o iniciar sesiones.</CardDescription>
-          </CardHeader>
-        </Card>
-      )}
+        <div id="wx-loading" class="py-12 text-center text-sm text-muted-foreground">Cargando biblioteca...</div>
+        <div id="wx-catalog" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+        <div id="wx-empty" class="hidden py-12 text-center text-sm text-muted-foreground">Sin resultados.</div>
+        <div id="wx-pagination" class="mt-4 flex items-center justify-center gap-3">
+          <button id="wx-prev-btn" class="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent disabled:opacity-40" disabled>
+            Anterior
+          </button>
+          <span id="wx-page-info" class="text-xs text-muted-foreground"></span>
+          <button id="wx-next-btn" class="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent disabled:opacity-40" disabled>
+            Siguiente
+          </button>
+        </div>
+      </div>
     </div>
   </Shell>
 </AppLayout>
 
 <script>
-/** @type {string} */
-const CSRF_TOKEN = '{csrfValue}';
+var CSRF_TOKEN = '{csrfValue}';
 
-/**
- * @param {string} name
- * @returns {Promise<Array<{id: string, name: string, gifUrl?: string, target: string, equipment: string}>>}
- */
-async function searchWorkoutX(name) {
-  const res = await fetch('/api/workoutx/search?name=' + encodeURIComponent(name));
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Error de conexión' }));
-    throw new Error(err.error || 'Error desconocido');
-  }
-  return res.json();
+var tabBtns = document.querySelectorAll('.tab-btn');
+tabBtns.forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    tabBtns.forEach(function (b) {
+      b.classList.remove('bg-primary/10', 'text-foreground', 'shadow-sm');
+      b.classList.add('text-muted-foreground');
+    });
+    btn.classList.remove('text-muted-foreground');
+    btn.classList.add('bg-primary/10', 'text-foreground', 'shadow-sm');
+    document.querySelectorAll('.tab-content').forEach(function (el) {
+      el.classList.add('hidden');
+    });
+    document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+
+    if (btn.dataset.tab === 'catalog') {
+      loadCatalog(0);
+    }
+  });
+});
+
+tabBtns[0].classList.add('bg-primary/10', 'text-foreground', 'shadow-sm');
+
+var wxOffset = 0;
+var wxTotal = 0;
+var wxLimit = 12;
+var wxMode = 'browse';
+var wxSearchTerm = '';
+
+function el(id) { return document.getElementById(id); }
+
+function showLoading() {
+  el('wx-loading').classList.remove('hidden');
+  el('wx-catalog').innerHTML = '';
+  el('wx-empty').classList.add('hidden');
 }
 
-document.addEventListener('click', async (e) => {
-  const target = /** @type {HTMLElement | null} */ (e.target);
-  if (!target) return;
-  const btn = target.closest('.workoutx-search-btn');
-  if (!(btn instanceof HTMLElement)) return;
+function hideLoading() {
+  el('wx-loading').classList.add('hidden');
+}
 
-  const exerciseId = btn.dataset.exerciseId;
-  const name = btn.dataset.exerciseName;
-  if (!exerciseId || !name) return;
+function renderCard(r) {
+  var difficulty = r.difficulty ? r.difficulty.charAt(0).toUpperCase() + r.difficulty.slice(1) : '';
+  var tags = r.movement_tags && r.movement_tags.length ? r.movement_tags.slice(0, 3).join(' · ') : '';
+  var img = r.gifUrl
+    ? '<img src="' + r.gifUrl + '" alt="' + r.name + '" class="w-full object-contain" loading="lazy" />'
+    : '';
+  return '<form method="post" action="/api/workoutx/import">' +
+    '<input type="hidden" name="csrf" value="' + CSRF_TOKEN + '" />' +
+    '<input type="hidden" name="workoutxId" value="' + r.id + '" />' +
+    '<div class="overflow-hidden rounded-lg border border-border/60 bg-card transition-all hover:shadow-md">' +
+      (img ? '<div class="overflow-hidden bg-muted">' + img + '</div>' : '') +
+      '<div class="p-3">' +
+        '<h3 class="truncate text-sm font-semibold">' + r.name + '</h3>' +
+        '<p class="text-xs text-muted-foreground">' + r.target + ' · ' + r.equipment + '</p>' +
+        (difficulty ? '<p class="text-xs text-muted-foreground">' + difficulty + (r.bodyPart ? ' · ' + r.bodyPart : '') + '</p>' : '') +
+        (tags ? '<p class="mt-1 text-[10px] text-primary/70 truncate">' + tags + '</p>' : '') +
+        '<div class="mt-2">' +
+          '<button type="submit" class="w-full rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90">Importar</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</form>';
+}
 
-  const container = document.querySelector('.workoutx-results[data-exercise-id="' + exerciseId + '"]');
-  if (!container) return;
+function renderCards(data) {
+  hideLoading();
+  if (!data || !data.length) {
+    el('wx-catalog').innerHTML = '';
+    el('wx-empty').classList.remove('hidden');
+    return;
+  }
+  el('wx-empty').classList.add('hidden');
+  el('wx-catalog').innerHTML = data.map(renderCard).join('');
+}
 
-  /** @type {HTMLButtonElement} */ (btn).disabled = true;
-  btn.textContent = 'Buscando...';
-  container.innerHTML = '';
+function updatePagination() {
+  var page = Math.floor(wxOffset / wxLimit) + 1;
+  var totalPages = Math.ceil(wxTotal / wxLimit);
+  el('wx-page-info').textContent = 'Pagina ' + page + ' de ' + (totalPages || 1) + ' (' + wxTotal + ' ejercicios)';
+  el('wx-prev-btn').disabled = wxOffset <= 0;
+  el('wx-next-btn').disabled = wxOffset + wxLimit >= wxTotal;
+}
+
+async function loadCatalog(offset) {
+  wxOffset = offset;
+  showLoading();
+
+  var url;
+  if (wxMode === 'search' && wxSearchTerm) {
+    url = '/api/workoutx/search?name=' + encodeURIComponent(wxSearchTerm);
+  } else {
+    url = '/api/workoutx/list?offset=' + wxOffset + '&limit=' + wxLimit;
+  }
 
   try {
-    const results = await searchWorkoutX(name);
-
-    if (!results.length) {
-      container.innerHTML = '<p class="text-xs text-muted-foreground">Sin resultados en WorkoutX.</p>';
-      return;
+    var res = await fetch(url);
+    if (!res.ok) {
+      var errData = await res.json().catch(function () { return { error: 'Error de conexion' }; });
+      throw new Error(errData.error || 'Error desconocido');
     }
 
-    container.innerHTML = results.map(function (r) {
-      var tags = r.movement_tags && r.movement_tags.length ? r.movement_tags.slice(0, 3).join(' · ') : '';
-      var details = r.difficulty ? r.difficulty.charAt(0).toUpperCase() + r.difficulty.slice(1) : '';
-      details += r.bodyPart ? (details ? ' · ' : '') + r.bodyPart : '';
-      return '<form method="post" action="/api/workoutx/link" class="flex items-center justify-between gap-2 rounded-md border border-input p-2">' +
-        '<input type="hidden" name="csrf" value="' + CSRF_TOKEN + '" />' +
-        '<input type="hidden" name="exerciseId" value="' + exerciseId + '" />' +
-        '<input type="hidden" name="workoutxId" value="' + r.id + '" />' +
-        '<div class="flex items-center gap-2 min-w-0">' +
-          (r.gifUrl ? '<img src="' + r.gifUrl + '" alt="" class="h-10 w-10 shrink-0 rounded object-cover" />' : '') +
-          '<div class="min-w-0">' +
-            '<p class="truncate text-xs font-medium">' + r.name + '</p>' +
-            '<p class="text-[10px] text-muted-foreground truncate">' + r.target + ' · ' + r.equipment + '</p>' +
-            (details ? '<p class="text-[10px] text-muted-foreground">' + details + '</p>' : '') +
-            (tags ? '<p class="text-[10px] text-primary/70 truncate">' + tags + '</p>' : '') +
-          '</div>' +
-        '</div>' +
-        '<button type="submit" class="shrink-0 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90">Vincular</button>' +
-      '</form>';
-    }).join('');
+    if (wxMode === 'search' && wxSearchTerm) {
+      var results = await res.json();
+      wxTotal = results.length;
+      renderCards(results);
+      el('wx-pagination').classList.add('hidden');
+    } else {
+      var data = await res.json();
+      wxTotal = data.total || 0;
+      renderCards(data.data || []);
+      el('wx-pagination').classList.remove('hidden');
+      updatePagination();
+    }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Error desconocido';
-    container.innerHTML = '<p class="text-xs text-destructive">' + msg + '</p>';
-  } finally {
-    /** @type {HTMLButtonElement} */ (btn).disabled = false;
-    btn.textContent = 'Buscar en WorkoutX';
+    hideLoading();
+    el('wx-catalog').innerHTML = '<p class="col-span-full py-8 text-center text-xs text-destructive">' + (err.message || 'Error al cargar') + '</p>';
   }
+}
+
+el('wx-prev-btn').addEventListener('click', function () {
+  loadCatalog(Math.max(0, wxOffset - wxLimit));
+});
+el('wx-next-btn').addEventListener('click', function () {
+  loadCatalog(wxOffset + wxLimit);
+});
+
+el('wx-search-btn').addEventListener('click', function () {
+  var term = el('wx-search-input').value.trim();
+  if (!term) return;
+  wxMode = 'search';
+  wxSearchTerm = term;
+  loadCatalog(0);
+});
+el('wx-search-input').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') el('wx-search-btn').click();
+});
+
+el('wx-browse-btn').addEventListener('click', function () {
+  wxMode = 'browse';
+  wxSearchTerm = '';
+  el('wx-search-input').value = '';
+  loadCatalog(0);
 });
 </script>
