@@ -221,11 +221,17 @@ function parseJson(str: string | null): string[] {
               Buscar
             </button>
           </div>
-          <button id="wx-browse-btn" class="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent">
-            Explorar todo
-          </button>
+          <div class="flex items-center gap-2">
+            <button id="wx-load-all-btn" class="inline-flex h-9 items-center justify-center rounded-md border border-primary/30 bg-primary/5 px-3 text-xs font-medium text-primary hover:bg-primary/10">
+              Cargar todos
+            </button>
+            <button id="wx-browse-btn" class="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent">
+              Explorar todo
+            </button>
+          </div>
         </div>
         <div id="wx-loading" class="py-12 text-center text-sm text-muted-foreground">Cargando biblioteca...</div>
+        <div id="wx-progress" class="hidden py-4 text-center text-xs text-muted-foreground"></div>
         <div id="wx-catalog" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
         <div id="wx-empty" class="hidden py-12 text-center text-sm text-muted-foreground">Sin resultados.</div>
         <div id="wx-pagination" class="mt-4 flex items-center justify-center gap-3">
@@ -282,6 +288,8 @@ var wxTotal = 0;
 var wxLimit = 12;
 var wxMode = 'browse';
 var wxSearchTerm = '';
+var wxAllExercises = [];
+var wxLoadingAll = false;
 
 function el(id) { return document.getElementById(id); }
 
@@ -289,6 +297,7 @@ function showLoading() {
   el('wx-loading').classList.remove('hidden');
   el('wx-catalog').innerHTML = '';
   el('wx-empty').classList.add('hidden');
+  el('wx-progress').classList.add('hidden');
 }
 
 function hideLoading() {
@@ -312,15 +321,21 @@ function renderCard(r) {
   '</div>';
 }
 
-function renderCards(data) {
+function renderCards(data, append) {
   hideLoading();
   if (!data || !data.length) {
-    el('wx-catalog').innerHTML = '';
-    el('wx-empty').classList.remove('hidden');
+    if (!append) {
+      el('wx-catalog').innerHTML = '';
+      el('wx-empty').classList.remove('hidden');
+    }
     return;
   }
   el('wx-empty').classList.add('hidden');
-  el('wx-catalog').innerHTML = data.map(renderCard).join('');
+  if (append) {
+    el('wx-catalog').insertAdjacentHTML('beforeend', data.map(renderCard).join(''));
+  } else {
+    el('wx-catalog').innerHTML = data.map(renderCard).join('');
+  }
 }
 
 function updatePagination() {
@@ -334,6 +349,7 @@ function updatePagination() {
 async function loadCatalog(offset) {
   wxOffset = offset;
   showLoading();
+  wxAllExercises = [];
 
   var url;
   if (wxMode === 'search' && wxSearchTerm) {
@@ -354,11 +370,13 @@ async function loadCatalog(offset) {
       wxTotal = results.length;
       renderCards(results);
       el('wx-pagination').classList.add('hidden');
+      el('wx-load-all-btn').classList.add('hidden');
     } else {
       var data = await res.json();
       wxTotal = data.total || 0;
       renderCards(data.data || []);
       el('wx-pagination').classList.remove('hidden');
+      el('wx-load-all-btn').classList.remove('hidden');
       updatePagination();
     }
   } catch (err) {
@@ -392,7 +410,65 @@ el('wx-browse-btn').addEventListener('click', function () {
   loadCatalog(0);
 });
 
-// Detail view
+// Load all exercises (sequential batch fetch)
+el('wx-load-all-btn').addEventListener('click', async function () {
+  if (wxLoadingAll) return;
+  wxLoadingAll = true;
+  el('wx-load-all-btn').disabled = true;
+  el('wx-load-all-btn').textContent = 'Cargando...';
+  el('wx-pagination').classList.add('hidden');
+  el('wx-progress').classList.remove('hidden');
+  el('wx-progress').textContent = 'Iniciando carga de todos los ejercicios...';
+  showLoading();
+  wxAllExercises = [];
+
+  try {
+    // Get first page to know total
+    var first = await fetch('/api/workoutx/list?offset=0&limit=10');
+    if (!first.ok) throw new Error('Error al iniciar la carga');
+    var firstData = await first.json();
+    wxAllExercises = firstData.data || [];
+    renderCards(wxAllExercises);
+    wxTotal = firstData.total || 0;
+    el('wx-progress').textContent = 'Cargados ' + wxAllExercises.length + ' de ' + wxTotal + ' ejercicios...';
+
+    // Fetch remaining pages sequentially (respect rate limits)
+    var pageSize = 10;
+    var totalPages = Math.ceil(wxTotal / pageSize);
+
+    for (var p = 1; p < totalPages; p++) {
+      var off = p * pageSize;
+      var resp = await fetch('/api/workoutx/list?offset=' + off + '&limit=' + pageSize);
+      if (!resp.ok) {
+        if (resp.status === 429) {
+          // Rate limited — wait 2s and retry once
+          await new Promise(function (r) { setTimeout(r, 2000); });
+          resp = await fetch('/api/workoutx/list?offset=' + off + '&limit=' + pageSize);
+          if (!resp.ok) throw new Error('Error al cargar página ' + (p + 1));
+        } else {
+          throw new Error('Error al cargar página ' + (p + 1));
+        }
+      }
+      var pageData = await resp.json();
+      var items = pageData.data || [];
+      wxAllExercises = wxAllExercises.concat(items);
+      renderCards(items, true);
+      el('wx-progress').textContent = 'Cargados ' + wxAllExercises.length + ' de ' + wxTotal + ' ejercicios...';
+    }
+
+    el('wx-progress').textContent = 'Mostrando los ' + wxAllExercises.length + ' ejercicios disponibles.';
+    el('wx-load-all-btn').textContent = 'Cargar todos';
+    el('wx-load-all-btn').disabled = false;
+    wxLoadingAll = false;
+  } catch (err) {
+    el('wx-progress').textContent = 'Error: ' + (err.message || 'Error desconocido');
+    el('wx-load-all-btn').textContent = 'Cargar todos';
+    el('wx-load-all-btn').disabled = false;
+    wxLoadingAll = false;
+  }
+});
+
+// Detail view - event delegation for close buttons
 el('wx-catalog').addEventListener('click', function (e) {
   var card = e.target.closest('.wx-card');
   if (!card) return;
@@ -402,7 +478,17 @@ el('wx-catalog').addEventListener('click', function (e) {
 });
 
 el('wx-detail-overlay').addEventListener('click', function (e) {
-  if (e.target === el('wx-detail-overlay')) closeDetail();
+  if (e.target === el('wx-detail-overlay') || e.target.getAttribute('data-action') === 'close-detail') {
+    el('wx-detail-overlay').classList.add('hidden');
+  }
+});
+
+// Delegate clicks inside detail content for close buttons
+el('wx-detail-panel').addEventListener('click', function (e) {
+  var closeBtn = e.target.closest('[data-action="close-detail"]');
+  if (closeBtn) {
+    el('wx-detail-overlay').classList.add('hidden');
+  }
 });
 
 function openDetail(wxId) {
@@ -436,7 +522,7 @@ function openDetail(wxId) {
       el('wx-detail-content').innerHTML =
         '<div class="flex items-start justify-between gap-3">' +
           '<h2 class="text-lg font-bold">' + d.name + '</h2>' +
-          '<button onclick="closeDetail()" class="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground">&times;</button>' +
+          '<button data-action="close-detail" class="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground text-xl leading-none">&times;</button>' +
         '</div>' +
         '<div class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">' +
           '<span><span class="font-medium text-foreground">Objetivo:</span> ' + (d.target || '-') + '</span>' +
@@ -455,7 +541,7 @@ function openDetail(wxId) {
           '<input type="hidden" name="csrf" value="' + CSRF_TOKEN + '" />' +
           '<input type="hidden" name="workoutxId" value="' + d.id + '" />' +
           '<button type="submit" class="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">Importar a mis ejercicios</button>' +
-          '<button type="button" onclick="closeDetail()" class="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent">Cerrar</button>' +
+          '<button type="button" data-action="close-detail" class="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent">Cerrar</button>' +
         '</form>';
     })
     .catch(function (err) {
@@ -463,9 +549,5 @@ function openDetail(wxId) {
       el('wx-detail-content').classList.remove('hidden');
       el('wx-detail-content').innerHTML = '<p class="py-8 text-center text-xs text-destructive">Error al cargar detalle: ' + (err.message || 'Error desconocido') + '</p>';
     });
-}
-
-function closeDetail() {
-  el('wx-detail-overlay').classList.add('hidden');
 }
 </script>
