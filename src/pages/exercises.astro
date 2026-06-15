@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import CsrfInput from '@/components/security/CsrfInput.astro';
 import { prisma } from '@/lib/db';
 import { listRoutines } from '@/lib/workouts/queries';
+import { ensureCsrfCookie, getCsrfFormValue } from '@/lib/security/csrf';
 
 if (!Astro.locals.user) {
   return Astro.redirect('/login');
@@ -17,6 +18,7 @@ if (!Astro.locals.user) {
 const error = Astro.url.searchParams.get('error');
 const updated = Astro.url.searchParams.get('updated');
 const deleted = Astro.url.searchParams.get('deleted');
+const linked = Astro.url.searchParams.get('linked');
 
 const userId = Astro.locals.user.id;
 
@@ -28,6 +30,18 @@ const [exercises, routines] = await Promise.all([
   }),
   listRoutines(userId).catch(() => [])
 ]);
+
+const csrfValue = getCsrfFormValue(ensureCsrfCookie(Astro.cookies));
+
+function parseJson(str: string | null): string[] {
+  if (!str) return [];
+  try {
+    const parsed = JSON.parse(str);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 ---
 
 <AppLayout title="GymTracker | Ejercicios">
@@ -35,107 +49,179 @@ const [exercises, routines] = await Promise.all([
     <div class="grid gap-4">
       {updated ? <p class="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-600 dark:text-green-400">Ejercicio actualizado.</p> : null}
       {deleted ? <p class="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-600 dark:text-green-400">Ejercicio eliminado.</p> : null}
+      {linked ? <p class="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-600 dark:text-green-400">Ejercicio vinculado con WorkoutX.</p> : null}
       {error === 'not_found' ? <p class="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">Ejercicio no encontrado.</p> : null}
+      {error === 'workoutx_not_found' ? <p class="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">Ejercicio no encontrado en WorkoutX.</p> : null}
 
       {exercises.length ? (
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {exercises.map((ex) => (
-            <Card key={ex.id}>
-              <CardHeader>
-                <CardTitle>{ex.name}</CardTitle>
-                <CardDescription>
-                  {[ex.muscle, ex.equipment].filter(Boolean).join(' · ') || 'Sin detalles'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p class="mb-3 text-xs text-muted-foreground">
-                  {ex._count.routineItems} rutinas · {ex._count.setLogs} series registradas
-                </p>
+          {exercises.map((ex) => {
+            const instructions = parseJson(ex.instructions);
+            const secondaryMuscles = parseJson(ex.secondaryMuscles);
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    {ex.name}
+                    {ex.workoutxId ? <span class="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">WX</span> : null}
+                  </CardTitle>
+                  <CardDescription>
+                    {[ex.muscle, ex.equipment].filter(Boolean).join(' · ') || 'Sin detalles'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p class="mb-3 text-xs text-muted-foreground">
+                    {ex._count.routineItems} rutinas · {ex._count.setLogs} series registradas
+                  </p>
 
-                <!-- Añadir a rutina -->
-                <details class="group mb-2">
-                  <summary class="cursor-pointer text-xs font-medium text-primary hover:underline">Añadir a rutina</summary>
-                  <div class="mt-3">
-                    <form method="post" action="/api/exercises/add-to-routine" class="grid gap-3">
-                      <CsrfInput />
-                      <input type="hidden" name="exerciseId" value={ex.id} />
+                  {ex.gifUrl ? (
+                    <div class="mb-3 overflow-hidden rounded-lg bg-muted">
+                      <img src={ex.gifUrl} alt={ex.name} class="w-full object-contain" loading="lazy" />
+                    </div>
+                  ) : null}
 
-                      <div class="grid gap-1">
-                        <Label for={`existing-${ex.id}`}>Rutina existente</Label>
-                        <select
-                          id={`existing-${ex.id}`}
-                          name="routineId"
-                          class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        >
-                          <option value="">— Elegir rutina —</option>
-                          {routines.map((r) => (
-                            <option key={r.id} value={r.id}>{r.name}</option>
-                          ))}
-                        </select>
-                      </div>
+                  {instructions.length > 0 ? (
+                    <div class="mb-3">
+                      <p class="mb-1 text-xs font-medium">Instrucciones:</p>
+                      <ol class="list-inside list-decimal space-y-0.5 text-xs text-muted-foreground">
+                        {instructions.map((inst) => (
+                          <li>{inst}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  ) : null}
 
-                      <Separator class="my-1" />
+                  {secondaryMuscles.length > 0 ? (
+                    <div class="mb-3 text-xs text-muted-foreground">
+                      <span class="font-medium text-foreground">Músculos secundarios:</span>{' '}
+                      {secondaryMuscles.join(', ')}
+                    </div>
+                  ) : null}
 
-                      <div class="grid gap-1">
-                        <Label for={`new-name-${ex.id}`}>O crear nueva rutina</Label>
-                        <Input id={`new-name-${ex.id}`} name="newRoutineName" placeholder="Nombre de la rutina" />
-                      </div>
-                      <div class="grid gap-1">
-                        <Label for={`new-day-${ex.id}`}>Nombre del día</Label>
-                        <Input id={`new-day-${ex.id}`} name="newDayName" placeholder="Día 1" />
-                      </div>
+                  {ex.targetMuscle ? (
+                    <div class="mb-3 text-xs text-muted-foreground">
+                      <span class="font-medium text-foreground">Músculo objetivo:</span> {ex.targetMuscle}
+                    </div>
+                  ) : null}
 
-                      <div class="grid grid-cols-2 gap-2">
+                  <details class="group mb-2">
+                    <summary class="cursor-pointer text-xs font-medium text-primary hover:underline">
+                      WorkoutX {ex.workoutxId ? '✓ Vinculado' : ''}
+                    </summary>
+                    <div class="mt-3">
+                      {ex.workoutxId ? (
+                        <div class="space-y-3">
+                          <p class="text-xs text-muted-foreground">
+                            Vinculado a WorkoutX (ID: {ex.workoutxId})
+                          </p>
+                          <form method="post" action="/api/workoutx/link" class="flex items-center gap-2">
+                            <CsrfInput />
+                            <input type="hidden" name="exerciseId" value={ex.id} />
+                            <input type="hidden" name="workoutxId" value={ex.workoutxId} />
+                            <Button type="submit" size="sm" variant="secondary">Actualizar desde WorkoutX</Button>
+                          </form>
+                        </div>
+                      ) : (
+                        <div>
+                          <button
+                            class="workoutx-search-btn inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent"
+                            data-exercise-id={ex.id}
+                            data-exercise-name={ex.name}
+                          >
+                            Buscar en WorkoutX
+                          </button>
+                          <div class="workoutx-results mt-2 space-y-2" data-exercise-id={ex.id}></div>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+
+                  <!-- Añadir a rutina -->
+                  <details class="group mb-2">
+                    <summary class="cursor-pointer text-xs font-medium text-primary hover:underline">Añadir a rutina</summary>
+                    <div class="mt-3">
+                      <form method="post" action="/api/exercises/add-to-routine" class="grid gap-3">
+                        <CsrfInput />
+
+                        <input type="hidden" name="exerciseId" value={ex.id} />
+
                         <div class="grid gap-1">
-                          <Label for={`sets-${ex.id}`}>Series</Label>
-                          <Input id={`sets-${ex.id}`} name="targetSets" inputMode="numeric" placeholder="4" />
+                          <Label for={`existing-${ex.id}`}>Rutina existente</Label>
+                          <select
+                            id={`existing-${ex.id}`}
+                            name="routineId"
+                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                          >
+                            <option value="">— Elegir rutina —</option>
+                            {routines.map((r) => (
+                              <option value={r.id}>{r.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <Separator class="my-1" />
+
+                        <div class="grid gap-1">
+                          <Label for={`new-name-${ex.id}`}>O crear nueva rutina</Label>
+                          <Input id={`new-name-${ex.id}`} name="newRoutineName" placeholder="Nombre de la rutina" />
                         </div>
                         <div class="grid gap-1">
-                          <Label for={`reps-${ex.id}`}>Reps</Label>
-                          <Input id={`reps-${ex.id}`} name="targetReps" placeholder="8-12" />
+                          <Label for={`new-day-${ex.id}`}>Nombre del día</Label>
+                          <Input id={`new-day-${ex.id}`} name="newDayName" placeholder="Día 1" />
                         </div>
-                      </div>
 
-                      <Button type="submit" size="sm" variant="secondary">Añadir</Button>
-                    </form>
-                  </div>
-                </details>
+                        <div class="grid grid-cols-2 gap-2">
+                          <div class="grid gap-1">
+                            <Label for={`sets-${ex.id}`}>Series</Label>
+                            <Input id={`sets-${ex.id}`} name="targetSets" inputMode="numeric" placeholder="4" />
+                          </div>
+                          <div class="grid gap-1">
+                            <Label for={`reps-${ex.id}`}>Reps</Label>
+                            <Input id={`reps-${ex.id}`} name="targetReps" placeholder="8-12" />
+                          </div>
+                        </div>
 
-                <!-- Editar -->
-                <details class="group">
-                  <summary class="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Editar</summary>
-                  <div class="mt-3">
-                    <form method="post" action="/api/exercises/update" class="grid gap-3">
-                      <CsrfInput />
-                      <input type="hidden" name="id" value={ex.id} />
-                      <div class="grid gap-1">
-                        <Label for={`name-${ex.id}`}>Nombre</Label>
-                        <Input id={`name-${ex.id}`} name="name" required defaultValue={ex.name} />
-                      </div>
-                      <div class="grid grid-cols-2 gap-2">
+                        <Button type="submit" size="sm" variant="secondary">Añadir</Button>
+                      </form>
+                    </div>
+                  </details>
+
+                  <!-- Editar -->
+                  <details class="group">
+                    <summary class="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Editar</summary>
+                    <div class="mt-3">
+                      <form method="post" action="/api/exercises/update" class="grid gap-3">
+                        <CsrfInput />
+                        <input type="hidden" name="id" value={ex.id} />
                         <div class="grid gap-1">
-                          <Label for={`muscle-${ex.id}`}>Músculo</Label>
-                          <Input id={`muscle-${ex.id}`} name="muscle" defaultValue={ex.muscle ?? ''} />
+                          <Label for={`name-${ex.id}`}>Nombre</Label>
+                          <Input id={`name-${ex.id}`} name="name" required defaultValue={ex.name} />
                         </div>
-                        <div class="grid gap-1">
-                          <Label for={`equipment-${ex.id}`}>Equipo</Label>
-                          <Input id={`equipment-${ex.id}`} name="equipment" defaultValue={ex.equipment ?? ''} />
+                        <div class="grid grid-cols-2 gap-2">
+                          <div class="grid gap-1">
+                            <Label for={`muscle-${ex.id}`}>Músculo</Label>
+                            <Input id={`muscle-${ex.id}`} name="muscle" defaultValue={ex.muscle ?? ''} />
+                          </div>
+                          <div class="grid gap-1">
+                            <Label for={`equipment-${ex.id}`}>Equipo</Label>
+                            <Input id={`equipment-${ex.id}`} name="equipment" defaultValue={ex.equipment ?? ''} />
+                          </div>
                         </div>
-                      </div>
-                      <div class="flex gap-2">
-                        <Button type="submit" size="sm" variant="secondary">Guardar</Button>
-                        <form method="post" action="/api/exercises/delete">
-                          <CsrfInput />
-                          <input type="hidden" name="id" value={ex.id} />
-                          <Button type="submit" size="sm" variant="ghost" class="text-destructive">Eliminar</Button>
-                        </form>
-                      </div>
-                    </form>
-                  </div>
-                </details>
-              </CardContent>
-            </Card>
-          ))}
+                        <div class="flex gap-2">
+                          <Button type="submit" size="sm" variant="secondary">Guardar</Button>
+                          <form method="post" action="/api/exercises/delete">
+                            <CsrfInput />
+                            <input type="hidden" name="id" value={ex.id} />
+                            <Button type="submit" size="sm" variant="ghost" class="text-destructive">Eliminar</Button>
+                          </form>
+                        </div>
+                      </form>
+                    </div>
+                  </details>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <Card>
@@ -148,3 +234,72 @@ const [exercises, routines] = await Promise.all([
     </div>
   </Shell>
 </AppLayout>
+
+<script>
+/** @type {string} */
+const CSRF_TOKEN = '{csrfValue}';
+
+/**
+ * @param {string} name
+ * @returns {Promise<Array<{id: string, name: string, gifUrl?: string, target: string, equipment: string}>>}
+ */
+async function searchWorkoutX(name) {
+  const res = await fetch('/api/workoutx/search?name=' + encodeURIComponent(name));
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Error de conexión' }));
+    throw new Error(err.error || 'Error desconocido');
+  }
+  return res.json();
+}
+
+document.addEventListener('click', async (e) => {
+  const target = /** @type {HTMLElement | null} */ (e.target);
+  if (!target) return;
+  const btn = target.closest('.workoutx-search-btn');
+  if (!(btn instanceof HTMLElement)) return;
+
+  const exerciseId = btn.dataset.exerciseId;
+  const name = btn.dataset.exerciseName;
+  if (!exerciseId || !name) return;
+
+  const container = document.querySelector('.workoutx-results[data-exercise-id="' + exerciseId + '"]');
+  if (!container) return;
+
+  /** @type {HTMLButtonElement} */ (btn).disabled = true;
+  btn.textContent = 'Buscando...';
+  container.innerHTML = '';
+
+  try {
+    const results = await searchWorkoutX(name);
+
+    if (!results.length) {
+      container.innerHTML = '<p class="text-xs text-muted-foreground">Sin resultados en WorkoutX.</p>';
+      return;
+    }
+
+    container.innerHTML = results.map(function (r) {
+      return '<form method="post" action="/api/workoutx/link" class="flex items-center justify-between gap-2 rounded-md border border-input p-2">' +
+        '<input type="hidden" name="csrf" value="' + CSRF_TOKEN + '" />' +
+        '<input type="hidden" name="exerciseId" value="' + exerciseId + '" />' +
+        '<input type="hidden" name="workoutxId" value="' + r.id + '" />' +
+        '<div class="min-w-0 flex-1">' +
+          '<div class="flex items-center gap-1.5">' +
+            (r.gifUrl ? '<img src="' + r.gifUrl + '" alt="" class="h-8 w-8 rounded object-cover" />' : '') +
+            '<div>' +
+              '<p class="truncate text-xs font-medium">' + r.name + '</p>' +
+              '<p class="text-[10px] text-muted-foreground">' + r.target + ' · ' + r.equipment + '</p>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<button type="submit" class="shrink-0 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90">Vincular</button>' +
+      '</form>';
+    }).join('');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Error desconocido';
+    container.innerHTML = '<p class="text-xs text-destructive">' + msg + '</p>';
+  } finally {
+    /** @type {HTMLButtonElement} */ (btn).disabled = false;
+    btn.textContent = 'Buscar en WorkoutX';
+  }
+});
+</script>
