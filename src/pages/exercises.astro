@@ -307,9 +307,9 @@ function hideLoading() {
 function renderCard(r) {
   var difficulty = r.difficulty ? r.difficulty.charAt(0).toUpperCase() + r.difficulty.slice(1) : '';
   var tags = r.movement_tags && r.movement_tags.length ? r.movement_tags.slice(0, 3).join(' · ') : '';
-  var gifSrc = r.id ? '/api/workoutx/gif?id=' + r.id : '';
+  var gifSrc = r.id ? '/api/workoutx/gif?id=' + r.id + '&embed=1' : '';
   var img = gifSrc
-    ? '<img src="' + gifSrc + '" alt="' + r.name + '" class="w-full object-contain" loading="lazy" />'
+    ? '<iframe src="' + gifSrc + '" class="w-full aspect-video" loading="lazy"></iframe>'
     : '';
   return '<div class="overflow-hidden rounded-lg border border-border/60 bg-card transition-all hover:shadow-md cursor-pointer wx-card" data-wx-id="' + r.id + '">' +
     (img ? '<div class="overflow-hidden bg-muted pointer-events-none">' + img + '</div>' : '') +
@@ -533,7 +533,7 @@ function openDetail(wxId) {
           (d.mechanic ? '<span><span class="font-medium text-foreground">Mecánica:</span> ' + d.mechanic + '</span>' : '') +
           (d.force ? '<span><span class="font-medium text-foreground">Fuerza:</span> ' + d.force + '</span>' : '') +
         '</div>' +
-        (d.id ? '<div class="mt-4 overflow-hidden rounded-lg bg-muted"><img src="/api/workoutx/gif?id=' + d.id + '" alt="' + d.name + '" class="w-full object-contain" /></div>' : '') +
+        (d.id ? '<div class="mt-4 overflow-hidden rounded-lg bg-muted"><iframe src="/api/workoutx/gif?id=' + d.id + '&embed=1" class="w-full aspect-video"></iframe></div>' : '') +
         instructions +
         secondary +
         description +
