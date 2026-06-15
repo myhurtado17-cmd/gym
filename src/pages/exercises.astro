@@ -33,7 +33,6 @@ const [exercises, routines] = await Promise.all([
 ]);
 
 const csrfValue = getCsrfFormValue(ensureCsrfCookie(Astro.cookies));
-const workoutxApiKey = process.env.WORKOUTX_API_KEY || '';
 
 function parseJson(str: string | null): string[] {
   if (!str) return [];
@@ -261,7 +260,6 @@ function parseJson(str: string | null): string[] {
 
 <script>
 var CSRF_TOKEN = '{csrfValue}';
-var WX_API_KEY = '{workoutxApiKey}';
 var WX_GIF_BASE = 'https://api.workoutxapp.com/v1/gifs/';
 
 var tabBtns = document.querySelectorAll('.tab-btn');
@@ -310,7 +308,7 @@ function hideLoading() {
 function renderCard(r) {
   var difficulty = r.difficulty ? r.difficulty.charAt(0).toUpperCase() + r.difficulty.slice(1) : '';
   var tags = r.movement_tags && r.movement_tags.length ? r.movement_tags.slice(0, 3).join(' · ') : '';
-  var gifSrc = r.id ? WX_GIF_BASE + r.id + '.gif?api-key=' + WX_API_KEY : '';
+  var gifSrc = r.id ? WX_GIF_BASE + r.id : '';
   var img = gifSrc
     ? '<iframe src="' + gifSrc + '" class="w-full aspect-video" loading="lazy"></iframe>'
     : '';
@@ -536,7 +534,7 @@ function openDetail(wxId) {
           (d.mechanic ? '<span><span class="font-medium text-foreground">Mecánica:</span> ' + d.mechanic + '</span>' : '') +
           (d.force ? '<span><span class="font-medium text-foreground">Fuerza:</span> ' + d.force + '</span>' : '') +
         '</div>' +
-        (d.id ? '<div class="mt-4 overflow-hidden rounded-lg bg-muted"><iframe src="' + WX_GIF_BASE + d.id + '.gif?api-key=' + WX_API_KEY + '" class="w-full aspect-video"></iframe></div>' : '') +
+        (d.id ? '<div class="mt-4 overflow-hidden rounded-lg bg-muted"><iframe src="' + WX_GIF_BASE + d.id + '" class="w-full aspect-video"></iframe></div>' : '') +
         instructions +
         secondary +
         description +
