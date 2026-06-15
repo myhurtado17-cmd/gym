@@ -278,17 +278,20 @@ document.addEventListener('click', async (e) => {
     }
 
     container.innerHTML = results.map(function (r) {
+      var tags = r.movement_tags && r.movement_tags.length ? r.movement_tags.slice(0, 3).join(' · ') : '';
+      var details = r.difficulty ? r.difficulty.charAt(0).toUpperCase() + r.difficulty.slice(1) : '';
+      details += r.bodyPart ? (details ? ' · ' : '') + r.bodyPart : '';
       return '<form method="post" action="/api/workoutx/link" class="flex items-center justify-between gap-2 rounded-md border border-input p-2">' +
         '<input type="hidden" name="csrf" value="' + CSRF_TOKEN + '" />' +
         '<input type="hidden" name="exerciseId" value="' + exerciseId + '" />' +
         '<input type="hidden" name="workoutxId" value="' + r.id + '" />' +
-        '<div class="min-w-0 flex-1">' +
-          '<div class="flex items-center gap-1.5">' +
-            (r.gifUrl ? '<img src="' + r.gifUrl + '" alt="" class="h-8 w-8 rounded object-cover" />' : '') +
-            '<div>' +
-              '<p class="truncate text-xs font-medium">' + r.name + '</p>' +
-              '<p class="text-[10px] text-muted-foreground">' + r.target + ' · ' + r.equipment + '</p>' +
-            '</div>' +
+        '<div class="flex items-center gap-2 min-w-0">' +
+          (r.gifUrl ? '<img src="' + r.gifUrl + '" alt="" class="h-10 w-10 shrink-0 rounded object-cover" />' : '') +
+          '<div class="min-w-0">' +
+            '<p class="truncate text-xs font-medium">' + r.name + '</p>' +
+            '<p class="text-[10px] text-muted-foreground truncate">' + r.target + ' · ' + r.equipment + '</p>' +
+            (details ? '<p class="text-[10px] text-muted-foreground">' + details + '</p>' : '') +
+            (tags ? '<p class="text-[10px] text-primary/70 truncate">' + tags + '</p>' : '') +
           '</div>' +
         '</div>' +
         '<button type="submit" class="shrink-0 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90">Vincular</button>' +

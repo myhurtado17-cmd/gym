@@ -7,6 +7,22 @@ export interface WorkoutXExercise {
   gifUrl: string;
   instructions: string[];
   secondaryMuscles: string[];
+  category?: string;
+  difficulty?: string;
+  mechanic?: string;
+  force?: string;
+  met?: number;
+  caloriesPerMinute?: number;
+  description?: string;
+  joint_focus?: string;
+  intensity_level?: string;
+  movement_tags?: string[];
+}
+
+interface WorkoutXSearchResponse {
+  total: number;
+  count: number;
+  data: WorkoutXExercise[];
 }
 
 const BASE_URL = 'https://api.workoutxapp.com/v1';
@@ -33,7 +49,8 @@ async function request<T>(path: string): Promise<T> {
 
 export async function searchByName(name: string): Promise<WorkoutXExercise[]> {
   const encoded = encodeURIComponent(name.trim());
-  return request<WorkoutXExercise[]>(`/exercises/name/${encoded}`);
+  const res = await request<WorkoutXSearchResponse>(`/exercises/name/${encoded}`);
+  return res.data;
 }
 
 export async function getById(id: string): Promise<WorkoutXExercise> {
