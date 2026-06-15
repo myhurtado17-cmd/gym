@@ -1,0 +1,92 @@
+---
+import AppLayout from '@/layouts/AppLayout.astro';
+import Shell from '@/components/shell/Shell.astro';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import CsrfInput from '@/components/security/CsrfInput.astro';
+import { prisma } from '@/lib/db';
+
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+
+const error = Astro.url.searchParams.get('error');
+const updated = Astro.url.searchParams.get('updated');
+const deleted = Astro.url.searchParams.get('deleted');
+
+const exercises = await prisma.exercise.findMany({
+  where: { userId: Astro.locals.user.id },
+  orderBy: { name: 'asc' },
+  include: { _count: { select: { routineItems: true, setLogs: true } } }
+});
+---
+
+<AppLayout title="GymTracker | Ejercicios">
+  <Shell title="Ejercicios" subtitle="Tu biblioteca de ejercicios">
+    <div class="grid gap-4">
+      {updated ? <p class="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-600 dark:text-green-400">Ejercicio actualizado.</p> : null}
+      {deleted ? <p class="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-600 dark:text-green-400">Ejercicio eliminado.</p> : null}
+      {error === 'not_found' ? <p class="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">Ejercicio no encontrado.</p> : null}
+
+      {exercises.length ? (
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {exercises.map((ex) => (
+            <Card key={ex.id}>
+              <CardHeader>
+                <CardTitle>{ex.name}</CardTitle>
+                <CardDescription>
+                  {[ex.muscle, ex.equipment].filter(Boolean).join(' · ') || 'Sin detalles'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p class="mb-3 text-xs text-muted-foreground">
+                  {ex._count.routineItems} rutinas · {ex._count.setLogs} series registradas
+                </p>
+                <details class="group">
+                  <summary class="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Editar</summary>
+                  <div class="mt-3">
+                    <form method="post" action="/api/exercises/update" class="grid gap-3">
+                      <CsrfInput />
+                      <input type="hidden" name="id" value={ex.id} />
+                      <div class="grid gap-1">
+                        <Label for={`name-${ex.id}`}>Nombre</Label>
+                        <Input id={`name-${ex.id}`} name="name" required defaultValue={ex.name} />
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div class="grid gap-1">
+                          <Label for={`muscle-${ex.id}`}>Músculo</Label>
+                          <Input id={`muscle-${ex.id}`} name="muscle" defaultValue={ex.muscle ?? ''} />
+                        </div>
+                        <div class="grid gap-1">
+                          <Label for={`equipment-${ex.id}`}>Equipo</Label>
+                          <Input id={`equipment-${ex.id}`} name="equipment" defaultValue={ex.equipment ?? ''} />
+                        </div>
+                      </div>
+                      <div class="flex gap-2">
+                        <Button type="submit" size="sm" variant="secondary">Guardar</Button>
+                        <form method="post" action="/api/exercises/delete">
+                          <CsrfInput />
+                          <input type="hidden" name="id" value={ex.id} />
+                          <Button type="submit" size="sm" variant="ghost" class="text-destructive">Eliminar</Button>
+                        </form>
+                      </div>
+                    </form>
+                  </div>
+                </details>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Sin ejercicios</CardTitle>
+            <CardDescription>Los ejercicios se crean automáticamente al importar rutinas o iniciar sesiones.</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+    </div>
+  </Shell>
+</AppLayout>

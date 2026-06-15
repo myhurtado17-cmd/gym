@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import CsrfInput from '@/components/security/CsrfInput.astro';
 
 const error = Astro.url.searchParams.get('error');
+const reset = Astro.url.searchParams.get('reset');
+const deleted = Astro.url.searchParams.get('deleted');
 ---
 
 <AppLayout title="GymTracker | Iniciar sesión">
@@ -22,6 +24,8 @@ const error = Astro.url.searchParams.get('error');
           <CardDescription>Inicia sesión para continuar.</CardDescription>
         </CardHeader>
         <CardContent>
+          {reset ? <p class="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-600 dark:text-green-400">Contraseña restablecida correctamente.</p> : null}
+          {deleted ? <p class="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-600 dark:text-green-400">Cuenta eliminada.</p> : null}
           {error ? <p class="mb-4 text-sm text-destructive">{error}</p> : null}
           <form method="post" action="/api/auth/login" class="grid gap-4">
             <CsrfInput />
@@ -34,10 +38,13 @@ const error = Astro.url.searchParams.get('error');
               <Input id="password" name="password" type="password" autoComplete="current-password" required />
             </div>
             <Button type="submit">Iniciar sesión</Button>
-            <p class="text-sm text-muted-foreground">
-              ¿Sin cuenta?{' '}
-              <a class="underline underline-offset-4 hover:text-foreground" href="/register">Crea una</a>
-            </p>
+            <div class="flex items-center justify-between text-sm">
+              <a class="text-muted-foreground underline underline-offset-4 hover:text-foreground" href="/forgot-password">¿Olvidaste tu contraseña?</a>
+              <span class="text-muted-foreground">
+                ¿Sin cuenta?{' '}
+                <a class="underline underline-offset-4 hover:text-foreground" href="/register">Crea una</a>
+              </span>
+            </div>
           </form>
         </CardContent>
       </Card>

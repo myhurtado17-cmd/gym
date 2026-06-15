@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { getRoutine } from '@/lib/workouts/queries';
 import { formatDateTime } from '@/lib/datetime';
 import CsrfInput from '@/components/security/CsrfInput.astro';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 if (!Astro.locals.user) return Astro.redirect('/login');
 
@@ -30,6 +32,24 @@ if (!routine) return Astro.redirect('/workouts');
         </form>
       </div>
 
+      <!-- Renombrar rutina -->
+      <details class="group rounded-lg border border-border/60 bg-background/30 px-4 py-3">
+        <summary class="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Renombrar rutina</summary>
+        <div class="mt-3">
+          <form method="post" action="/api/workouts/routines/rename" class="flex gap-2">
+            <CsrfInput />
+            <input type="hidden" name="routineId" value={routine.id} />
+            <input
+              name="name"
+              class="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm shadow-sm"
+              defaultValue={routine.name}
+              required
+            />
+            <Button type="submit" size="sm" variant="secondary">Guardar</Button>
+          </form>
+        </div>
+      </details>
+
       <div class="grid gap-4">
         {routine.days.map((day) => (
           <Card key={day.id}>
@@ -46,21 +66,50 @@ if (!routine) return Astro.redirect('/workouts');
               </form>
               <div class="grid gap-2">
                 {day.items.map((it) => (
-                  <div key={it.id} class="flex items-start justify-between gap-3 rounded-lg border border-border/60 bg-background/30 px-3 py-2">
-                    <div class="min-w-0">
-                      <p class="truncate text-sm font-medium">{it.exercise.name}</p>
-                      <p class="text-xs text-muted-foreground">
-                        {it.targetSets != null || it.targetReps ? (
-                          <>
-                            {it.targetSets != null ? `${it.targetSets} series` : 'Series'}
-                            {it.targetReps ? ` · ${it.targetReps} reps` : ''}
-                          </>
-                        ) : (
-                          'Sin objetivo'
-                        )}
-                        {it.notes ? ` · ${it.notes}` : ''}
-                      </p>
-                    </div>
+                  <div key={it.id} class="rounded-lg border border-border/60 bg-background/30">
+                    <details class="group">
+                      <summary class="flex cursor-pointer items-start justify-between gap-3 px-3 py-2">
+                        <div class="min-w-0">
+                          <p class="truncate text-sm font-medium">{it.exercise.name}</p>
+                          <p class="text-xs text-muted-foreground">
+                            {it.targetSets != null || it.targetReps ? (
+                              <>
+                                {it.targetSets != null ? `${it.targetSets} series` : 'Series'}
+                                {it.targetReps ? ` · ${it.targetReps} reps` : ''}
+                              </>
+                            ) : (
+                              'Sin objetivo'
+                            )}
+                            {it.notes ? ` · ${it.notes}` : ''}
+                          </p>
+                        </div>
+                        <span class="text-xs text-muted-foreground group-open:hidden">Editar</span>
+                        <span class="text-xs text-muted-foreground hidden group-open:inline">Cerrar</span>
+                      </summary>
+                      <div class="border-t border-border/60 px-3 py-3">
+                        <form method="post" action="/api/workouts/routines/update-item" class="grid gap-3">
+                          <CsrfInput />
+                          <input type="hidden" name="itemId" value={it.id} />
+                          <div class="grid grid-cols-2 gap-2">
+                            <div class="grid gap-1">
+                              <label class="text-xs text-muted-foreground" for={`sets-${it.id}`}>Series</label>
+                              <Input id={`sets-${it.id}`} name="targetSets" inputMode="numeric" defaultValue={it.targetSets?.toString() ?? ''} placeholder="4" />
+                            </div>
+                            <div class="grid gap-1">
+                              <label class="text-xs text-muted-foreground" for={`reps-${it.id}`}>Reps</label>
+                              <Input id={`reps-${it.id}`} name="targetReps" defaultValue={it.targetReps ?? ''} placeholder="8-12" />
+                            </div>
+                          </div>
+                          <div class="grid gap-1">
+                            <label class="text-xs text-muted-foreground" for={`notes-${it.id}`}>Notas</label>
+                            <Input id={`notes-${it.id}`} name="notes" defaultValue={it.notes ?? ''} placeholder="Opcional" />
+                          </div>
+                          <div class="flex justify-end">
+                            <Button type="submit" size="sm" variant="secondary">Guardar</Button>
+                          </div>
+                        </form>
+                      </div>
+                    </details>
                   </div>
                 ))}
               </div>

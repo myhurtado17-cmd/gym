@@ -1,11 +1,4 @@
-import {
-  Activity,
-  Apple,
-  ClipboardList,
-  Dumbbell,
-  LayoutDashboard,
-  Settings
-} from 'lucide-react';
+import { Activity, Apple, ClipboardList, Dumbbell, LayoutDashboard, List, Settings } from 'lucide-react';
 
 export type NavItem = {
   label: string;
@@ -18,6 +11,7 @@ export const navItems: NavItem[] = [
   { label: 'Entrenos', href: '/workouts', icon: Dumbbell },
   { label: 'Nutrición', href: '/nutrition', icon: Apple },
   { label: 'Cuerpo', href: '/body', icon: Activity },
+  { label: 'Ejercicios', href: '/exercises', icon: List },
   { label: 'Metas', href: '/goals', icon: ClipboardList },
   { label: 'Ajustes', href: '/settings', icon: Settings }
 ];

@@ -10,6 +10,7 @@
     "build": "prisma migrate deploy && prisma generate && astro build",
     "postinstall": "prisma generate",
     "preview": "astro preview",
+    "test": "vitest run",
     "astro": "astro",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -34,23 +35,27 @@
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "astro": "^6.3.6",
-    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.16.0",
+    "pg": "^8.16.3",
+    "prisma": "^7.8.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "recharts": "^3.8.1",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.0",
-    "prisma": "^7.8.0",
-    "pg": "^8.16.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
     "@types/node": "^25.9.1",
-    "typescript": "^6.0.3"
+    "eslint": "^10.5.0",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.4",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.1",
+    "vitest": "^4.1.9"
   }
 }

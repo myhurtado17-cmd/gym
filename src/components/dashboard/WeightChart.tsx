@@ -8,11 +8,11 @@ export function WeightChart({ points }: { points: Point[] }) {
   React.useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading chart...</div>;
+    return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Cargando gráfico...</div>;
   }
 
   if (!points.length) {
-    return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No weight data yet.</div>;
+    return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Sin datos aún.</div>;
   }
 
   return (

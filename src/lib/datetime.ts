@@ -1,6 +1,5 @@
 export function formatDateTime(d: Date) {
-  // Keep it stable across locales/timezones for now.
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('es', {
     year: 'numeric',
     month: 'short',
     day: '2-digit'

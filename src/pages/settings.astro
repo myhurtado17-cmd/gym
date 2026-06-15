@@ -2,22 +2,152 @@
 import AppLayout from '@/layouts/AppLayout.astro';
 import Shell from '@/components/shell/Shell.astro';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import CsrfInput from '@/components/security/CsrfInput.astro';
+import { prisma } from '@/lib/db';
 
 if (!Astro.locals.user) {
   return Astro.redirect('/login');
 }
+
+const user = Astro.locals.user;
+const error = Astro.url.searchParams.get('error');
+const updated = Astro.url.searchParams.get('updated');
+
+const profile = await prisma.userProfile.findUnique({
+  where: { userId: user.id }
+}).catch(() => null);
+
+const sessionsCount = await prisma.session.count({
+  where: { userId: user.id }
+}).catch(() => 0);
 ---
 
 <AppLayout title="GymTracker | Ajustes">
-  <Shell title="Ajustes" subtitle="Perfil y preferencias">
-    <Card>
-      <CardHeader>
-        <CardTitle>Perfil</CardTitle>
-        <CardDescription>Nombre, altura, metas, avatar.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p class="text-sm text-muted-foreground">Página en construcción.</p>
-      </CardContent>
-    </Card>
+  <Shell title="Ajustes" subtitle="Perfil, seguridad y preferencias">
+    <div class="grid gap-6">
+      {updated === 'profile' ? <p class="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-600 dark:text-green-400">Perfil actualizado.</p> : null}
+      {updated === 'password' ? <p class="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-600 dark:text-green-400">Contraseña actualizada.</p> : null}
+      {error === 'wrong_password' ? <p class="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">Contraseña incorrecta.</p> : null}
+      {error === 'invalid' ? <p class="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">Datos inválidos.</p> : null}
+
+      <!-- Perfil -->
+      <Card>
+        <CardHeader>
+          <CardTitle>Perfil</CardTitle>
+          <CardDescription>Nombre, altura y edad.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form method="post" action="/api/auth/update-profile" class="grid gap-4 max-w-md">
+            <CsrfInput />
+            <div class="grid gap-2">
+              <Label htmlFor="name">Nombre</Label>
+              <Input id="name" name="name" defaultValue={user.name ?? ''} placeholder="Tu nombre" />
+            </div>
+            <div class="grid gap-2">
+              <Label htmlFor="email">Correo electrónico</Label>
+              <Input id="email" value={user.email} disabled />
+              <p class="text-xs text-muted-foreground">El correo no se puede cambiar.</p>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="grid gap-2">
+                <Label htmlFor="heightCm">Altura (cm)</Label>
+                <Input id="heightCm" name="heightCm" inputMode="numeric" defaultValue={profile?.heightCm?.toString() ?? ''} placeholder="175" />
+              </div>
+              <div class="grid gap-2">
+                <Label htmlFor="age">Edad</Label>
+                <Input id="age" name="age" inputMode="numeric" defaultValue={profile?.age?.toString() ?? ''} placeholder="25" />
+              </div>
+            </div>
+            <Button type="submit">Guardar cambios</Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <!-- Contraseña -->
+      <Card>
+        <CardHeader>
+          <CardTitle>Cambiar contraseña</CardTitle>
+          <CardDescription>Actualiza tu contraseña actual.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form method="post" action="/api/auth/change-password" class="grid gap-4 max-w-md">
+            <CsrfInput />
+            <div class="grid gap-2">
+              <Label htmlFor="currentPassword">Contraseña actual</Label>
+              <Input id="currentPassword" name="currentPassword" type="password" autoComplete="current-password" required />
+            </div>
+            <div class="grid gap-2">
+              <Label htmlFor="newPassword">Nueva contraseña</Label>
+              <Input id="newPassword" name="newPassword" type="password" autoComplete="new-password" required />
+              <p class="text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
+            </div>
+            <Button type="submit">Cambiar contraseña</Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <!-- Sesiones activas -->
+      <Card>
+        <CardHeader>
+          <CardTitle>Sesiones activas</CardTitle>
+          <CardDescription>{sessionsCount} sesión(es) activa(s).</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form method="post" action="/api/auth/logout-all" class="flex items-center gap-3">
+            <CsrfInput />
+            <p class="text-sm text-muted-foreground">Cierra todas las sesiones activas (te desconectarás de todos los dispositivos).</p>
+            <Button type="submit" variant="outline" size="sm">Cerrar todas</Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <!-- Exportar datos -->
+      <Card>
+        <CardHeader>
+          <CardTitle>Exportar datos</CardTitle>
+          <CardDescription>Descarga tus datos en formato CSV.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div class="flex flex-wrap gap-2">
+            <a href="/api/export?type=workouts" target="_blank">
+              <Button variant="outline" size="sm">Entrenos</Button>
+            </a>
+            <a href="/api/export?type=nutrition" target="_blank">
+              <Button variant="outline" size="sm">Nutrición</Button>
+            </a>
+            <a href="/api/export?type=body" target="_blank">
+              <Button variant="outline" size="sm">Cuerpo</Button>
+            </a>
+            <a href="/api/export?type=all" target="_blank">
+              <Button variant="secondary" size="sm">Todo</Button>
+            </a>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Separator />
+
+      <!-- Eliminar cuenta -->
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle class="text-destructive">Eliminar cuenta</CardTitle>
+          <CardDescription>Esta acción es irreversible. Se eliminarán todos tus datos.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form method="post" action="/api/auth/delete-account" class="grid gap-4 max-w-md">
+            <CsrfInput />
+            <div class="grid gap-2">
+              <Label htmlFor="deletePassword">Confirma tu contraseña para eliminar</Label>
+              <Input id="deletePassword" name="password" type="password" required />
+            </div>
+            <Button type="submit" variant="destructive">Eliminar mi cuenta</Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   </Shell>
 </AppLayout>

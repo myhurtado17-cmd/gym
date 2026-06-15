@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { BodyChart } from '@/components/body/BodyChart';
+import { WeightChart } from '@/components/dashboard/WeightChart';
 import CsrfInput from '@/components/security/CsrfInput.astro';
 import { calculateBMI } from '@/lib/body/bmi';
 import { getBodyWeightSeries, listBodyMetrics } from '@/lib/body/queries';
@@ -110,7 +110,7 @@ const points = series
           <CardDescription>Últimos 30 días</CardDescription>
         </CardHeader>
         <CardContent className="h-[280px]">
-          <BodyChart client:load points={points} />
+          <WeightChart client:load points={points} />
         </CardContent>
       </Card>
     </div>

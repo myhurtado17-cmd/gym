@@ -40,13 +40,12 @@ const user = Astro.locals.user;
     <div class="min-w-0">
       <header class="sticky top-0 z-20 border-b border-border/60 bg-background/70 backdrop-blur">
         <div class="flex h-16 items-center gap-3 px-4 sm:px-6">
-          <a
-            href="#nav"
+          <button
             class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border/60 bg-background/40 text-foreground/90 md:hidden"
             aria-label="Abrir navegación"
           >
             <Menu className="h-5 w-5" />
-          </a>
+          </button>
           <div class="min-w-0 flex-1">
             {title ? <p class="truncate text-sm font-semibold">{title}</p> : null}
             {subtitle ? <p class="truncate text-xs text-muted-foreground">{subtitle}</p> : null}
@@ -69,9 +68,9 @@ const user = Astro.locals.user;
   </div>
 
   <!-- Mobile nav -->
-  <div id="nav" class="fixed inset-0 z-40 hidden">
-    <a href="#" class="absolute inset-0 bg-black/50" aria-label="Cerrar navegación"></a>
-    <div class="absolute left-0 top-0 h-full w-[78%] max-w-sm border-r border-border/60 bg-background/90 backdrop-blur">
+  <div id="nav" class="fixed inset-0 z-40 hidden" role="dialog" aria-modal="true">
+    <button class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" aria-label="Cerrar navegación" onclick="document.getElementById('nav').classList.add('hidden')"></button>
+    <div class="absolute left-0 top-0 h-full w-[78%] max-w-sm animate-in-from-left border-r border-border/60 bg-background shadow-2xl">
       <div class="flex h-16 items-center gap-3 px-4">
         <div class="grid h-10 w-10 place-items-center rounded-xl border border-border/60 bg-card">
           <LogoMark className="h-6 w-6" />
@@ -88,6 +87,34 @@ const user = Astro.locals.user;
   </div>
 </div>
 
+<script>
+  const nav = document.getElementById('nav');
+  const toggle = document.querySelector('[aria-label="Abrir navegación"]');
+
+  if (toggle && nav) {
+    toggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      nav.classList.remove('hidden');
+    });
+
+    nav.addEventListener('click', (e) => {
+      if (e.target === nav) nav.classList.add('hidden');
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !nav.classList.contains('hidden')) {
+        nav.classList.add('hidden');
+      }
+    });
+  }
+</script>
+
 <style>
-  #nav:target { display: block; }
+  .animate-in-from-left {
+    animation: slideIn 0.2s ease-out;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
 </style>

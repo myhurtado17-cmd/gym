@@ -9,6 +9,7 @@ import CsrfInput from '@/components/security/CsrfInput.astro';
 import { listGoals } from '@/lib/goals/queries';
 import { toISODate, startOfDay } from '@/lib/date';
 import { formatNumber } from '@/lib/number';
+import { prisma } from '@/lib/db';
 
 if (!Astro.locals.user) {
   return Astro.redirect('/login');
@@ -19,6 +20,12 @@ const error = Astro.url.searchParams.get('error');
 
 const goals = await listGoals(userId, 50).catch(() => []);
 const today = startOfDay(new Date());
+
+const latestWeight = await prisma.bodyMetric.findFirst({
+  where: { userId, weightKg: { not: null } },
+  orderBy: { date: 'desc' },
+  select: { weightKg: true }
+}).catch(() => null);
 ---
 
 <AppLayout title="GymTracker | Metas">
@@ -149,5 +156,42 @@ const today = startOfDay(new Date());
         </CardContent>
       </Card>
     </div>
+
+      <Card class="mt-6">
+        <CardHeader>
+          <CardTitle>Progreso de metas</CardTitle>
+          <CardDescription>Seguimiento visual de tu avance</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div class="grid gap-4 sm:grid-cols-2">
+            {goals.filter(g => !g.endsAt || new Date(g.endsAt) >= new Date()).slice(0, 4).map((g) => {
+              const target = g.targetValue != null ? Number(g.targetValue) : null;
+              const isWeight = g.type === 'WEIGHT' && target != null;
+              const currentWeight = isWeight ? latestWeight?.weightKg ?? null : null;
+              const pct = isWeight && currentWeight != null ? Math.min(Math.round((currentWeight / target) * 100), 100) : null;
+              return (
+                <div class="rounded-lg border border-border/60 bg-background/30 p-4">
+                  <p class="text-sm font-medium">{g.title}</p>
+                  <p class="text-xs text-muted-foreground">{g.type}{g.unit ? ` (${g.unit})` : ''}</p>
+                  <div class="mt-3">
+                    <div class="flex items-baseline justify-between text-xs text-muted-foreground">
+                      <span>Meta: {target ?? '—'}</span>
+                      {isWeight && currentWeight != null ? <span>Actual: {formatNumber(currentWeight, { maximumFractionDigits: 1 })} kg</span> : null}
+                    </div>
+                    {pct != null ? (
+                      <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div class="h-full rounded-full bg-primary transition-all" style={`width:${pct}%`} />
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {goals.filter(g => !g.endsAt || new Date(g.endsAt) >= new Date()).length === 0 ? (
+            <p class="text-sm text-muted-foreground">Crea metas activas para ver tu progreso aquí.</p>
+          ) : null}
+        </CardContent>
+      </Card>
   </Shell>
 </AppLayout>
