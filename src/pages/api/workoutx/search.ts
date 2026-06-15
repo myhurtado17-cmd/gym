@@ -1,19 +1,20 @@
 import type { APIRoute } from 'astro';
 import { searchByName } from '@/lib/workoutx/client';
+import { requireApiSession } from '@/lib/auth/api';
 
 export const GET: APIRoute = async ({ url, cookies }) => {
-  const name = url.searchParams.get('name')?.trim();
-  if (!name) {
-    return new Response(JSON.stringify({ error: 'Se requiere el parámetro "name"' }), {
-      status: 400,
+  const session = await requireApiSession(cookies);
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), {
+      status: 401,
       headers: { 'Content-Type': 'application/json' }
     });
   }
 
-  const token = cookies.get('session')?.value;
-  if (!token) {
-    return new Response(JSON.stringify({ error: 'No autorizado' }), {
-      status: 401,
+  const name = url.searchParams.get('name')?.trim();
+  if (!name) {
+    return new Response(JSON.stringify({ error: 'Se requiere el parámetro "name"' }), {
+      status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
   }
