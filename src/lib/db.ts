@@ -1,18 +1,20 @@
-import prismaPkg from '@prisma/client';
-import type { PrismaClient as PrismaClientType } from '@prisma/client';
-
-type PrismaClientConstructor = new (...args: any[]) => PrismaClientType;
-
-const PrismaClientCtor = (prismaPkg as unknown as {
-  PrismaClient: PrismaClientConstructor;
-}).PrismaClient;
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
 declare global {
-  var __prisma: PrismaClientType | undefined;
+  var __prisma: PrismaClient | undefined;
 }
 
 function createPrismaClient() {
-  return new PrismaClientCtor();
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error('DATABASE_URL is missing');
+  }
+
+  const pool = new Pool({ connectionString: url });
+  const adapter = new PrismaPg(pool);
+  return new PrismaClient({ adapter });
 }
 
 export const prisma = globalThis.__prisma ?? createPrismaClient();
