@@ -18,9 +18,7 @@ function createPrismaClient() {
   }
 
   return new PrismaClientCtor({
-    datasources: {
-      db: { url }
-    }
+    datasourceUrl: url
   });
 }
 
