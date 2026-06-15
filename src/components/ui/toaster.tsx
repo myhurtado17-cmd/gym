@@ -44,7 +44,7 @@ export function ToasterProvider({ children }: { children: React.ReactNode }) {
               {t.title ? <ToastTitle>{t.title}</ToastTitle> : null}
               {t.description ? <ToastDescription>{t.description}</ToastDescription> : null}
             </div>
-            <ToastClose aria-label="Close">
+            <ToastClose aria-label="Cerrar">
               <X className="h-4 w-4" />
             </ToastClose>
           </Toast>

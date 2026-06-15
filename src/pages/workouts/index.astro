@@ -14,16 +14,16 @@ const routines = await listRoutines(Astro.locals.user.id).catch(() => []);
 const recent = await listRecentSessions(Astro.locals.user.id, 8).catch(() => []);
 ---
 
-<AppLayout title="Gym | Workouts">
-  <Shell title="Workouts" subtitle="Routines, logs, and PRs">
+<AppLayout title="GymTracker | Entrenos">
+  <Shell title="Entrenos" subtitle="Rutinas, registros y marcas">
     <div class="flex flex-col gap-4">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p class="text-sm font-semibold">Routines</p>
-          <p class="text-xs text-muted-foreground">Create a routine by pasting your program.</p>
+          <p class="text-sm font-semibold">Rutinas</p>
+          <p class="text-xs text-muted-foreground">Crea una rutina pegando tu programa.</p>
         </div>
         <Button asChild>
-          <a href="/workouts/import">Import from paste</a>
+          <a href="/workouts/import">Importar</a>
         </Button>
       </div>
 
@@ -32,24 +32,24 @@ const recent = await listRecentSessions(Astro.locals.user.id, 8).catch(() => [])
           {routines.length ? (
             <div class="grid gap-4 md:grid-cols-2">
               {routines.map((r) => (
-                <Card>
+                <Card key={r.id}>
                   <CardHeader>
                     <CardTitle>
                       <a class="hover:underline" href={`/workouts/routines/${r.id}`}>{r.name}</a>
                     </CardTitle>
                     <CardDescription>
-                      {r._count.days} {r._count.days === 1 ? 'day' : 'days'} · Updated {formatDateTime(r.updatedAt)}
+                      {r._count.days} {r._count.days === 1 ? 'día' : 'días'} · Actualizado {formatDateTime(r.updatedAt)}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div class="flex gap-2">
                       <Button asChild variant="secondary" size="sm">
-                        <a href={`/workouts/routines/${r.id}`}>View</a>
+                        <a href={`/workouts/routines/${r.id}`}>Ver</a>
                       </Button>
                       <form method="post" action="/api/workouts/sessions/start">
                         <CsrfInput />
                         <input type="hidden" name="routineId" value={r.id} />
-                        <Button type="submit" variant="outline" size="sm">Start</Button>
+                        <Button type="submit" variant="outline" size="sm">Empezar</Button>
                       </form>
                     </div>
                   </CardContent>
@@ -59,12 +59,12 @@ const recent = await listRecentSessions(Astro.locals.user.id, 8).catch(() => [])
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>No routines yet</CardTitle>
-                <CardDescription>Paste your current plan and we’ll structure it into days and exercises.</CardDescription>
+                <CardTitle>Sin rutinas aún</CardTitle>
+                <CardDescription>Pega tu plan actual y lo estructuraremos en días y ejercicios.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Button asChild>
-                  <a href="/workouts/import">Import your first routine</a>
+                  <a href="/workouts/import">Importar tu primera rutina</a>
                 </Button>
               </CardContent>
             </Card>
@@ -73,30 +73,31 @@ const recent = await listRecentSessions(Astro.locals.user.id, 8).catch(() => [])
 
         <Card className="glass lg:col-span-5">
           <CardHeader>
-            <CardTitle>Recent sessions</CardTitle>
-            <CardDescription>Your latest logs</CardDescription>
+            <CardTitle>Sesiones recientes</CardTitle>
+            <CardDescription>Tus últimos registros</CardDescription>
           </CardHeader>
           <CardContent>
             {recent.length ? (
               <div class="grid gap-2">
                 {recent.map((s) => (
                   <a
+                    key={s.id}
                     href={`/workouts/sessions/${s.id}`}
                     class="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/30 px-3 py-2 text-sm hover:bg-accent"
                   >
                     <div class="min-w-0">
                       <p class="truncate font-medium">
-                        {s.routine?.name ?? 'Session'}
+                        {s.routine?.name ?? 'Sesión'}
                         {s.day?.name ? ` · ${s.day.name}` : ''}
                       </p>
                       <p class="text-xs text-muted-foreground">{formatDateTime(s.date)}</p>
                     </div>
-                    <p class="text-xs text-muted-foreground">{s._count.setLogs} sets</p>
+                    <p class="text-xs text-muted-foreground">{s._count.setLogs} series</p>
                   </a>
                 ))}
               </div>
             ) : (
-              <p class="text-sm text-muted-foreground">No sessions logged yet.</p>
+              <p class="text-sm text-muted-foreground">Sin sesiones registradas aún.</p>
             )}
           </CardContent>
         </Card>

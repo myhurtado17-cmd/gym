@@ -10,13 +10,13 @@ import { Separator } from '@/components/ui/separator';
 import { ToasterProvider, useToast } from '@/components/ui/toaster';
 
 const demoWeight = [
-  { day: 'Mon', kg: 82.3 },
-  { day: 'Tue', kg: 82.1 },
-  { day: 'Wed', kg: 81.9 },
-  { day: 'Thu', kg: 81.7 },
-  { day: 'Fri', kg: 81.8 },
-  { day: 'Sat', kg: 81.4 },
-  { day: 'Sun', kg: 81.2 }
+  { day: 'Lun', kg: 82.3 },
+  { day: 'Mar', kg: 82.1 },
+  { day: 'Mié', kg: 81.9 },
+  { day: 'Jue', kg: 81.7 },
+  { day: 'Vie', kg: 81.8 },
+  { day: 'Sáb', kg: 81.4 },
+  { day: 'Dom', kg: 81.2 }
 ];
 
 function DemoInner() {
@@ -25,14 +25,13 @@ function DemoInner() {
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
-    // Recharts' ResponsiveContainer needs real layout measurements.
     setMounted(true);
   }, []);
 
   return (
     <div className="relative">
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 h-[560px] w-[560px] -translate-x-1/2 rounded-full bg-gradient-to-tr from-fuchsia-500/20 via-sky-500/20 to-emerald-500/20 blur-3xl" />
+        <div className="absolute -top-40 left-1/2 h-[560px] w-[560px] -translate-x-1/2 rounded-full bg-gradient-to-tr from-violet-500/20 via-sky-500/20 to-emerald-500/20 blur-3xl" />
         <div className="absolute -bottom-48 right-[-120px] h-[520px] w-[520px] rounded-full bg-gradient-to-tr from-indigo-500/15 via-cyan-500/15 to-lime-500/15 blur-3xl" />
       </div>
 
@@ -45,10 +44,10 @@ function DemoInner() {
         >
           <div className="inline-flex items-center gap-2">
             <div className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_0_4px] shadow-emerald-500/20" />
-            <p className="text-sm text-muted-foreground">Gym Progress Tracker</p>
+            <p className="text-sm text-muted-foreground">GymTracker</p>
           </div>
           <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-            Premium dashboard foundation
+            Panel de control premium
           </h1>
           <p className="max-w-2xl text-pretty text-sm text-muted-foreground sm:text-base">
             Tailwind v4 + React islands + Radix primitives + Framer Motion + Recharts.
@@ -58,12 +57,12 @@ function DemoInner() {
         <div className="mt-8 grid gap-4 md:grid-cols-12">
           <Card className="md:col-span-5">
             <CardHeader>
-              <CardTitle>Quick log</CardTitle>
-              <CardDescription>Validate components and state.</CardDescription>
+              <CardTitle>Registro rápido</CardTitle>
+              <CardDescription>Validar componentes y estado.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="weight">Body weight (kg)</Label>
+                <Label htmlFor="weight">Peso corporal (kg)</Label>
                 <Input
                   id="weight"
                   inputMode="decimal"
@@ -75,28 +74,28 @@ function DemoInner() {
                 <Button
                   onClick={() =>
                     toast({
-                      title: 'Saved',
-                      description: `Weight logged: ${weight} kg` 
+                      title: 'Guardado',
+                      description: `Peso registrado: ${weight} kg`
                     })
                   }
                 >
-                  Save
+                  Guardar
                 </Button>
                 <Button variant="secondary" onClick={() => setWeight('')}>
-                  Clear
+                  Limpiar
                 </Button>
               </div>
               <Separator />
               <p className="text-sm text-muted-foreground">
-                Next phases will wire this to Prisma + auth.
+                Próximas fases conectarán con Prisma + auth.
               </p>
             </CardContent>
           </Card>
 
           <Card className="md:col-span-7">
             <CardHeader>
-              <CardTitle>Weekly weight</CardTitle>
-              <CardDescription>Responsive chart (Recharts).</CardDescription>
+              <CardTitle>Peso semanal</CardTitle>
+              <CardDescription>Gráfico responsive (Recharts).</CardDescription>
             </CardHeader>
             <CardContent className="h-[260px]">
               {mounted ? (
@@ -129,7 +128,7 @@ function DemoInner() {
                 </ResponsiveContainer>
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  Loading chart...
+                  Cargando gráfico...
                 </div>
               )}
             </CardContent>

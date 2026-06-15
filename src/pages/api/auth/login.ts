@@ -17,28 +17,28 @@ const LoginSchema = z.object({
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const formData = await request.formData();
   if (!requireCsrf(cookies, formData.get(CSRF_FIELD_NAME))) {
-    return redirect(`/login?error=${encodeURIComponent('Invalid session')}`);
+    return redirect(`/login?error=${encodeURIComponent('Sesión inválida')}`);
   }
   const parsed = LoginSchema.safeParse({
     email: formData.get('email')?.toString(),
     password: formData.get('password')?.toString()
   });
 
-  if (!parsed.success) return redirect(`/login?error=${encodeURIComponent('Invalid email or password')}`);
+  if (!parsed.success) return redirect(`/login?error=${encodeURIComponent('Correo o contraseña inválidos')}`);
 
   const email = parsed.data.email.toLowerCase();
 
   const ip = getClientIp(request);
   const limit = rateLimit({ key: `login:${ip}:${email}`, windowMs: 60_000, max: 10 });
   if (!limit.allowed) {
-    return redirect(`/login?error=${encodeURIComponent('Too many attempts. Try again in a minute.')}`);
+    return redirect(`/login?error=${encodeURIComponent('Demasiados intentos. Intenta de nuevo en un minuto.')}`);
   }
 
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return redirect(`/login?error=${encodeURIComponent('Invalid email or password')}`);
+  if (!user) return redirect(`/login?error=${encodeURIComponent('Correo o contraseña inválidos')}`);
 
   const ok = await verifyPassword(user.passwordHash, parsed.data.password);
-  if (!ok) return redirect(`/login?error=${encodeURIComponent('Invalid email or password')}`);
+  if (!ok) return redirect(`/login?error=${encodeURIComponent('Correo o contraseña inválidos')}`);
 
   // Invalidate any existing session to reduce session fixation risk.
   const existingToken = cookies.get(SESSION_COOKIE_NAME)?.value;

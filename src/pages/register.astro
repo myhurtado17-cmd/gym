@@ -9,7 +9,7 @@ import CsrfInput from '@/components/security/CsrfInput.astro';
 const error = Astro.url.searchParams.get('error');
 ---
 
-<AppLayout title="Gym | Register">
+<AppLayout title="GymTracker | Crear cuenta">
   <main class="relative">
     <div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
       <div class="absolute -top-48 left-1/2 h-[620px] w-[620px] -translate-x-1/2 rounded-full bg-gradient-to-tr from-indigo-500/20 via-cyan-500/20 to-emerald-500/20 blur-3xl" />
@@ -18,30 +18,30 @@ const error = Astro.url.searchParams.get('error');
     <div class="mx-auto grid min-h-dvh max-w-md place-items-center px-4 py-10">
       <Card className="glass w-full">
         <CardHeader>
-          <CardTitle>Create your account</CardTitle>
-          <CardDescription>Start tracking workouts, nutrition, and metrics.</CardDescription>
+          <CardTitle className="text-2xl">Crear cuenta</CardTitle>
+          <CardDescription>Empieza a registrar entrenos, nutrición y métricas.</CardDescription>
         </CardHeader>
         <CardContent>
           {error ? <p class="mb-4 text-sm text-destructive">{error}</p> : null}
           <form method="post" action="/api/auth/register" class="grid gap-4">
             <CsrfInput />
             <div class="grid gap-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Nombre</Label>
               <Input id="name" name="name" type="text" autoComplete="name" />
             </div>
             <div class="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Correo electrónico</Label>
               <Input id="email" name="email" type="email" autoComplete="email" required />
             </div>
             <div class="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Contraseña</Label>
               <Input id="password" name="password" type="password" autoComplete="new-password" required />
-              <p class="text-xs text-muted-foreground">Minimum 8 characters.</p>
+              <p class="text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
             </div>
-            <Button type="submit">Create account</Button>
+            <Button type="submit">Crear cuenta</Button>
             <p class="text-sm text-muted-foreground">
-              Already have an account?{' '}
-              <a class="underline underline-offset-4 hover:text-foreground" href="/login">Sign in</a>
+              ¿Ya tienes cuenta?{' '}
+              <a class="underline underline-offset-4 hover:text-foreground" href="/login">Inicia sesión</a>
             </p>
           </form>
         </CardContent>

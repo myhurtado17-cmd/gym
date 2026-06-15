@@ -40,31 +40,31 @@ if (!id) return Astro.redirect('/workouts');
       );
 ---
 
-<AppLayout title="Gym | Workout Session">
+<AppLayout title="GymTracker | Sesión de entreno">
   <Shell
-    title="Workout session"
+    title="Sesión de entreno"
     subtitle={`${formatDateTime(session.date)}${session.routine ? ` · ${session.routine.name}` : ''}${session.day ? ` · ${session.day.name}` : ''}`}
   >
     <div class="flex flex-col gap-4">
       {error ? <p class="text-sm text-destructive">{error}</p> : null}
       <div class="flex items-center justify-between">
         <Button asChild variant="ghost">
-          <a href="/workouts">Back</a>
+          <a href="/workouts">Volver</a>
         </Button>
         <div class="flex items-center gap-2">
           <form method="post" action="/api/workouts/sessions/delete">
             <CsrfInput />
             <input type="hidden" name="sessionId" value={session.id} />
-            <Button type="submit" variant="outline" size="sm">Delete</Button>
+            <Button type="submit" variant="outline" size="sm">Eliminar</Button>
           </form>
           {!isCompleted ? (
             <form method="post" action="/api/workouts/sessions/finish">
               <CsrfInput />
               <input type="hidden" name="sessionId" value={session.id} />
-              <Button type="submit" variant="secondary" size="sm">Finish</Button>
+              <Button type="submit" variant="secondary" size="sm">Finalizar</Button>
             </form>
           ) : (
-            <p class="text-xs text-muted-foreground">Completed</p>
+            <p class="text-xs text-muted-foreground">Completado</p>
           )}
         </div>
       </div>
@@ -72,8 +72,8 @@ if (!id) return Astro.redirect('/workouts');
       {!isCompleted ? (
         <Card className="border-border/60 bg-background/10">
           <CardHeader>
-            <CardTitle>Session notes</CardTitle>
-            <CardDescription>Optional notes saved on finish.</CardDescription>
+            <CardTitle>Notas de la sesión</CardTitle>
+            <CardDescription>Notas opcionales que se guardan al finalizar.</CardDescription>
           </CardHeader>
           <CardContent>
             <form method="post" action="/api/workouts/sessions/finish" class="grid gap-2">
@@ -83,10 +83,10 @@ if (!id) return Astro.redirect('/workouts');
                 name="notes"
                 rows={3}
                 class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                placeholder="How did it go? PRs, technique notes, pain, etc."
+                placeholder="¿Cómo fue? Marcas, técnica, molestias, etc."
               />
               <div class="flex justify-end">
-                <Button type="submit" variant="secondary" size="sm">Finish session</Button>
+                <Button type="submit" variant="secondary" size="sm">Finalizar sesión</Button>
               </div>
             </form>
           </CardContent>
@@ -105,17 +105,17 @@ if (!id) return Astro.redirect('/workouts');
             });
 
             return (
-              <Card>
+              <Card key={it.id}>
                 <CardHeader>
                   <CardTitle>{it.exercise.name}</CardTitle>
                   <CardDescription>
                     {it.targetSets != null || it.targetReps ? (
                       <>
-                        {it.targetSets != null ? `${it.targetSets} sets` : 'Sets'}
+                        {it.targetSets != null ? `${it.targetSets} series` : 'Series'}
                         {it.targetReps ? ` · ${it.targetReps} reps` : ''}
                       </>
                     ) : (
-                      'No target'
+                      'Sin objetivo'
                     )}
                     {it.notes ? ` · ${it.notes}` : ''}
                   </CardDescription>
@@ -124,6 +124,7 @@ if (!id) return Astro.redirect('/workouts');
                   <div class="grid gap-2">
                     {sets.map(({ setNumber, existing }) => (
                       <form
+                        key={setNumber}
                         method="post"
                         action="/api/workouts/sessions/save"
                         class="grid grid-cols-[56px_1fr_1fr_1fr] items-end gap-2 rounded-lg border border-border/60 bg-background/30 p-2"
@@ -133,7 +134,7 @@ if (!id) return Astro.redirect('/workouts');
                         <input type="hidden" name="exerciseId" value={it.exercise.id} />
                         <input type="hidden" name="setNumber" value={String(setNumber)} />
 
-                        <div class="text-xs text-muted-foreground">Set {setNumber}</div>
+                        <div class="text-xs text-muted-foreground">Serie {setNumber}</div>
                         <div class="grid gap-1">
                           <label class="text-xs text-muted-foreground" for={`reps-${it.exercise.id}-${setNumber}`}>Reps</label>
                           <Input
@@ -167,7 +168,7 @@ if (!id) return Astro.redirect('/workouts');
                               defaultValue={existing?.rpe != null ? formatNumber(decimalToNumber(existing.rpe) ?? null) : ''}
                               disabled={isCompleted}
                             />
-                            <Button type="submit" size="sm" variant="secondary" disabled={isCompleted}>Save</Button>
+                            <Button type="submit" size="sm" variant="secondary" disabled={isCompleted}>Guardar</Button>
                           </div>
                         </div>
                       </form>
@@ -182,18 +183,18 @@ if (!id) return Astro.redirect('/workouts');
         <div class="grid gap-4">
           <Card>
             <CardHeader>
-              <CardTitle>Ad-hoc session</CardTitle>
-              <CardDescription>Add exercises as you go.</CardDescription>
+              <CardTitle>Sesión libre</CardTitle>
+              <CardDescription>Añade ejercicios sobre la marcha.</CardDescription>
             </CardHeader>
             <CardContent>
               <form method="post" action="/api/workouts/sessions/add-exercise" class="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <CsrfInput />
                 <input type="hidden" name="sessionId" value={session.id} />
                 <div class="grid flex-1 gap-1">
-                  <label class="text-xs text-muted-foreground" for="exerciseName">Exercise name</label>
-                  <Input id="exerciseName" name="name" placeholder="Lat Pulldown" required disabled={isCompleted} />
+                  <label class="text-xs text-muted-foreground" for="exerciseName">Nombre del ejercicio</label>
+                  <Input id="exerciseName" name="name" placeholder="Jalón al pecho" required disabled={isCompleted} />
                 </div>
-                <Button type="submit" variant="secondary" disabled={isCompleted}>Add</Button>
+                <Button type="submit" variant="secondary" disabled={isCompleted}>Añadir</Button>
               </form>
             </CardContent>
           </Card>
@@ -210,15 +211,15 @@ if (!id) return Astro.redirect('/workouts');
                 });
 
                 return (
-                  <Card>
+                  <Card key={ex.id}>
                     <CardHeader>
                       <CardTitle>{ex.name}</CardTitle>
-                      <CardDescription>{logs.length ? `${logs.length} saved sets` : 'No sets yet'}</CardDescription>
+                      <CardDescription>{logs.length ? `${logs.length} series guardadas` : 'Sin series aún'}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div class="grid gap-2">
                         {sets.map(({ setNumber, existing }) => (
-                          <div class="grid gap-2 rounded-lg border border-border/60 bg-background/30 p-2">
+                          <div key={setNumber} class="grid gap-2 rounded-lg border border-border/60 bg-background/30 p-2">
                             <form
                               method="post"
                               action="/api/workouts/sessions/save"
@@ -229,7 +230,7 @@ if (!id) return Astro.redirect('/workouts');
                               <input type="hidden" name="exerciseId" value={ex.id} />
                               <input type="hidden" name="setNumber" value={String(setNumber)} />
 
-                              <div class="text-xs text-muted-foreground">Set {setNumber}</div>
+                              <div class="text-xs text-muted-foreground">Serie {setNumber}</div>
                               <div class="grid gap-1">
                                 <label class="text-xs text-muted-foreground" for={`reps-${ex.id}-${setNumber}`}>Reps</label>
                                 <Input
@@ -263,7 +264,7 @@ if (!id) return Astro.redirect('/workouts');
                                     defaultValue={existing?.rpe != null ? formatNumber(decimalToNumber(existing.rpe) ?? null) : ''}
                                     disabled={isCompleted}
                                   />
-                                  <Button type="submit" size="sm" variant="secondary" disabled={isCompleted}>Save</Button>
+                                  <Button type="submit" size="sm" variant="secondary" disabled={isCompleted}>Guardar</Button>
                                 </div>
                               </div>
                             </form>
@@ -275,7 +276,7 @@ if (!id) return Astro.redirect('/workouts');
                                 <input type="hidden" name="exerciseId" value={ex.id} />
                                 <input type="hidden" name="setNumber" value={String(setNumber)} />
                                 <Button type="submit" size="sm" variant="ghost" disabled={isCompleted}>
-                                  Delete set
+                                  Eliminar serie
                                 </Button>
                               </form>
                             ) : null}
@@ -290,8 +291,8 @@ if (!id) return Astro.redirect('/workouts');
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>No exercises yet</CardTitle>
-                <CardDescription>Add your first exercise above.</CardDescription>
+                <CardTitle>Sin ejercicios aún</CardTitle>
+                <CardDescription>Añade tu primer ejercicio arriba.</CardDescription>
               </CardHeader>
             </Card>
           )}

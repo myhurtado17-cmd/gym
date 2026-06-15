@@ -11,42 +11,42 @@ if (!Astro.locals.user) return Astro.redirect('/login');
 const error = Astro.url.searchParams.get('error');
 ---
 
-<AppLayout title="Gym | Import Routine">
-  <Shell title="Import routine" subtitle="Paste your program and we’ll parse it">
+<AppLayout title="GymTracker | Importar rutina">
+  <Shell title="Importar rutina" subtitle="Pega tu programa y lo parseamos">
     <div class="mx-auto w-full max-w-2xl">
       <Card>
         <CardHeader>
-          <CardTitle>Paste import</CardTitle>
+          <CardTitle>Importar</CardTitle>
           <CardDescription>
-            Use one day heading per block, then one exercise per line.
-            Example: <code class="font-mono">Day 1: Push</code> then <code class="font-mono">Bench Press - 4x8</code>.
+            Usa un encabezado por día, luego un ejercicio por línea.
+            Ejemplo: <code class="font-mono">Día 1: Empuje</code> luego <code class="font-mono">Press Banca - 4x8</code>.
           </CardDescription>
         </CardHeader>
         <form method="post" action="/api/workouts/import" class="contents">
           <CardContent className="grid gap-3">
             <CsrfInput />
-            {error ? <p class="text-sm text-destructive">Couldn’t import. Check name and text.</p> : null}
+            {error ? <p class="text-sm text-destructive">No se pudo importar. Revisa nombre y texto.</p> : null}
             <div class="grid gap-1.5">
-              <label class="text-sm font-medium" for="name">Routine name</label>
+              <label class="text-sm font-medium" for="name">Nombre de la rutina</label>
               <Input id="name" name="name" placeholder="Push Pull Legs" required />
             </div>
             <div class="grid gap-1.5">
-              <label class="text-sm font-medium" for="text">Routine text</label>
+              <label class="text-sm font-medium" for="text">Texto de la rutina</label>
               <textarea
                 id="text"
                 name="text"
                 required
                 rows={14}
                 class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                placeholder={`Day 1: Push\nBench Press - 4x8\nIncline DB Press - 3x10\n\nDay 2: Pull\nPull-ups - 4x6-10 # add weight when 10\nBarbell Row - 4x8`}
+                placeholder={`Día 1: Empuje\nPress Banca - 4x8\nPress Inclinado Manc. - 3x10\n\nDía 2: Tirón\nDominadas - 4x6-10 # añadir peso cuando llegue a 10\nRemo Barra - 4x8`}
               />
             </div>
           </CardContent>
           <CardFooter className="flex items-center justify-between">
             <Button asChild variant="ghost">
-              <a href="/workouts">Back</a>
+              <a href="/workouts">Volver</a>
             </Button>
-            <Button type="submit">Import</Button>
+            <Button type="submit">Importar</Button>
           </CardFooter>
         </form>
       </Card>

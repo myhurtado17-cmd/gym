@@ -21,14 +21,14 @@ const goals = await listGoals(userId, 50).catch(() => []);
 const today = startOfDay(new Date());
 ---
 
-<AppLayout title="Gym | Goals">
-  <Shell title="Goals" subtitle="Targets and milestones">
+<AppLayout title="GymTracker | Metas">
+  <Shell title="Metas" subtitle="Objetivos e hitos">
     <div class="grid gap-4 lg:grid-cols-12">
       <Card className="glass lg:col-span-6">
         <CardHeader>
-          <CardTitle>Create goal</CardTitle>
+          <CardTitle>Crear meta</CardTitle>
           <CardDescription>
-            Nutrition targets: use <code class="font-mono">CALORIES</code> (kcal) and <code class="font-mono">MACROS</code> with unit
+            Metas de nutrición: usa <code class="font-mono">CALORIES</code> (kcal) y <code class="font-mono">MACROS</code> con unidad
             <code class="font-mono">protein</code>/<code class="font-mono">carbs</code>/<code class="font-mono">fat</code>.
           </CardDescription>
         </CardHeader>
@@ -37,46 +37,46 @@ const today = startOfDay(new Date());
           <form method="post" action="/api/goals/upsert" class="grid gap-3">
             <CsrfInput />
             <div class="grid gap-1">
-              <label class="text-xs text-muted-foreground" for="type">Type</label>
+              <label class="text-xs text-muted-foreground" for="type">Tipo</label>
               <select
                 id="type"
                 name="type"
                 class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 required
               >
-                <option value="WEIGHT">WEIGHT</option>
-                <option value="BODY_FAT">BODY_FAT</option>
-                <option value="CALORIES">CALORIES</option>
+                <option value="WEIGHT">PESO</option>
+                <option value="BODY_FAT">GRASA CORPORAL</option>
+                <option value="CALORIES">CALORÍAS</option>
                 <option value="MACROS">MACROS</option>
-                <option value="STRENGTH">STRENGTH</option>
+                <option value="STRENGTH">FUERZA</option>
               </select>
             </div>
             <div class="grid gap-1">
-              <label class="text-xs text-muted-foreground" for="title">Title</label>
-              <Input id="title" name="title" placeholder="Cut: 2300 kcal" required />
+              <label class="text-xs text-muted-foreground" for="title">Título</label>
+              <Input id="title" name="title" placeholder="Definición: 2300 kcal" required />
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div class="grid gap-1">
-                <label class="text-xs text-muted-foreground" for="targetValue">Target value</label>
+                <label class="text-xs text-muted-foreground" for="targetValue">Valor objetivo</label>
                 <Input id="targetValue" name="targetValue" placeholder="2300" />
               </div>
               <div class="grid gap-1">
-                <label class="text-xs text-muted-foreground" for="unit">Unit (optional)</label>
+                <label class="text-xs text-muted-foreground" for="unit">Unidad (opcional)</label>
                 <Input id="unit" name="unit" placeholder="kcal / protein / kg" />
               </div>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div class="grid gap-1">
-                <label class="text-xs text-muted-foreground" for="startsAt">Start</label>
+                <label class="text-xs text-muted-foreground" for="startsAt">Inicio</label>
                 <Input id="startsAt" name="startsAt" type="date" required defaultValue={toISODate(today)} />
               </div>
               <div class="grid gap-1">
-                <label class="text-xs text-muted-foreground" for="endsAt">End (optional)</label>
+                <label class="text-xs text-muted-foreground" for="endsAt">Fin (opcional)</label>
                 <Input id="endsAt" name="endsAt" type="date" />
               </div>
             </div>
             <div class="flex justify-end">
-              <Button type="submit" variant="secondary">Save goal</Button>
+              <Button type="submit" variant="secondary">Guardar meta</Button>
             </div>
           </form>
         </CardContent>
@@ -84,20 +84,20 @@ const today = startOfDay(new Date());
 
       <Card className="lg:col-span-6">
         <CardHeader>
-          <CardTitle>Your goals</CardTitle>
-          <CardDescription>Most recent first.</CardDescription>
+          <CardTitle>Tus metas</CardTitle>
+          <CardDescription>Más recientes primero.</CardDescription>
         </CardHeader>
         <CardContent>
           {goals.length ? (
             <div class="grid gap-3">
               {goals.map((g) => (
-                <div class="rounded-lg border border-border/60 bg-background/30 p-3">
+                <div key={g.id} class="rounded-lg border border-border/60 bg-background/30 p-3">
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
                       <p class="truncate text-sm font-semibold">{g.title}</p>
                       <p class="text-xs text-muted-foreground">
                         {g.type}
-                        {g.targetValue != null ? ` · target ${formatNumber(g.targetValue, { maximumFractionDigits: 1 })}` : ''}
+                        {g.targetValue != null ? ` · objetivo ${formatNumber(g.targetValue, { maximumFractionDigits: 1 })}` : ''}
                         {g.unit ? ` ${g.unit}` : ''}
                         {` · ${toISODate(g.startsAt)}`}
                         {g.endsAt ? ` → ${toISODate(g.endsAt)}` : ''}
@@ -106,7 +106,7 @@ const today = startOfDay(new Date());
                     <form method="post" action="/api/goals/delete">
                       <CsrfInput />
                       <input type="hidden" name="id" value={g.id} />
-                      <Button type="submit" variant="ghost" size="sm">Delete</Button>
+                      <Button type="submit" variant="ghost" size="sm">Eliminar</Button>
                     </form>
                   </div>
 
@@ -117,34 +117,34 @@ const today = startOfDay(new Date());
                     <input type="hidden" name="id" value={g.id} />
                     <input type="hidden" name="type" value={g.type} />
                     <div class="grid gap-1 sm:col-span-2">
-                      <label class="text-xs text-muted-foreground" for={`title-${g.id}`}>Title</label>
+                      <label class="text-xs text-muted-foreground" for={`title-${g.id}`}>Título</label>
                       <Input id={`title-${g.id}`} name="title" required defaultValue={g.title} />
                     </div>
                     <div class="grid gap-1">
-                      <label class="text-xs text-muted-foreground" for={`target-${g.id}`}>Target</label>
+                      <label class="text-xs text-muted-foreground" for={`target-${g.id}`}>Objetivo</label>
                       <Input id={`target-${g.id}`} name="targetValue" defaultValue={g.targetValue ?? ''} />
                     </div>
                     <div class="grid gap-1">
-                      <label class="text-xs text-muted-foreground" for={`unit-${g.id}`}>Unit</label>
+                      <label class="text-xs text-muted-foreground" for={`unit-${g.id}`}>Unidad</label>
                       <Input id={`unit-${g.id}`} name="unit" defaultValue={g.unit ?? ''} />
                     </div>
                     <div class="grid gap-1">
-                      <label class="text-xs text-muted-foreground" for={`start-${g.id}`}>Start</label>
+                      <label class="text-xs text-muted-foreground" for={`start-${g.id}`}>Inicio</label>
                       <Input id={`start-${g.id}`} name="startsAt" type="date" required defaultValue={toISODate(g.startsAt)} />
                     </div>
                     <div class="grid gap-1">
-                      <label class="text-xs text-muted-foreground" for={`end-${g.id}`}>End</label>
+                      <label class="text-xs text-muted-foreground" for={`end-${g.id}`}>Fin</label>
                       <Input id={`end-${g.id}`} name="endsAt" type="date" defaultValue={g.endsAt ? toISODate(g.endsAt) : ''} />
                     </div>
                     <div class="flex justify-end sm:col-span-2">
-                      <Button type="submit" variant="outline" size="sm">Update</Button>
+                      <Button type="submit" variant="outline" size="sm">Actualizar</Button>
                     </div>
                   </form>
                 </div>
               ))}
             </div>
           ) : (
-            <p class="text-sm text-muted-foreground">No goals yet.</p>
+            <p class="text-sm text-muted-foreground">Sin metas aún.</p>
           )}
         </CardContent>
       </Card>

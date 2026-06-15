@@ -18,7 +18,7 @@ const RegisterSchema = z.object({
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const formData = await request.formData();
   if (!requireCsrf(cookies, formData.get(CSRF_FIELD_NAME))) {
-    return redirect(`/register?error=${encodeURIComponent('Invalid session')}`);
+    return redirect(`/register?error=${encodeURIComponent('Sesión inválida')}`);
   }
   const parsed = RegisterSchema.safeParse({
     name: formData.get('name')?.toString(),
@@ -26,7 +26,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     password: formData.get('password')?.toString()
   });
 
-  if (!parsed.success) return redirect(`/register?error=${encodeURIComponent('Invalid input')}`);
+  if (!parsed.success) return redirect(`/register?error=${encodeURIComponent('Datos inválidos')}`);
 
   const email = parsed.data.email.toLowerCase();
   const name = parsed.data.name?.trim() ? parsed.data.name.trim() : null;
@@ -34,11 +34,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const ip = getClientIp(request);
   const limit = rateLimit({ key: `register:${ip}`, windowMs: 60_000, max: 5 });
   if (!limit.allowed) {
-    return redirect(`/register?error=${encodeURIComponent('Too many attempts. Try again in a minute.')}`);
+    return redirect(`/register?error=${encodeURIComponent('Demasiados intentos. Intenta de nuevo en un minuto.')}`);
   }
 
   const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) return redirect(`/register?error=${encodeURIComponent('Email already in use')}`);
+  if (exists) return redirect(`/register?error=${encodeURIComponent('Correo ya registrado')}`);
 
   const passwordHash = await hashPassword(parsed.data.password);
   const user = await prisma.user.create({
