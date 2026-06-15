@@ -12,14 +12,7 @@ declare global {
 }
 
 function createPrismaClient() {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error('DATABASE_URL is missing (set it in Vercel Environment Variables).');
-  }
-
-  return new PrismaClientCtor({
-    datasourceUrl: url
-  });
+  return new PrismaClientCtor();
 }
 
 export const prisma = globalThis.__prisma ?? createPrismaClient();
